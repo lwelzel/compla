@@ -1,0 +1,15 @@
+name: compla
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - matplotlib
+  - scipy
+  - seaborn
+  - python=3.9
+  - numpy
+  - pandas
+  - h5py
+  - numba
+  - astroquery
+prefix: C:\Users\lukas\anaconda3\envs\compla
