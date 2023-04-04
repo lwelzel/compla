@@ -294,3 +294,7 @@ fabric.properties
 *.txt
 *.filepart
 *.DS_Store
+*._*
+*.db
+*.rayleigh
+*.cia
