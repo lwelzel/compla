@@ -1,0 +1,62 @@
+[
+  {
+    "molecule": "H2O",
+    "abundance": -3,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "CH4",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "NH3",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "CO",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "CO2",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "HCN",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "Na",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "K",
+    "abundance": -7,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "TiO",
+    "abundance": -15,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "VO",
+    "abundance": -15,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "FeH",
+    "abundance": -15,
+    "type": "ConstantGas"
+  },
+  {
+    "molecule": "e-",
+    "abundance": -15,
+    "type": "ConstantGas"
+  }
+]
