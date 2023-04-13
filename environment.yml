@@ -1,15 +1,21 @@
 name: compla
 channels:
+  - conda-forge
   - defaults
 dependencies:
+  - seaborn
+  - numba
+  - matplotlib
+  - pandas
+  - jupyter
   - python=3.9
   - numpy
-  - seaborn
-  - astroquery
-  - numba
-  - h5py
-  - pandas
   - scipy
-  - matplotlib
-  - jupyter
-prefix: C:\Users\lukas\miniconda3\envs\compla
+  - astroquery
+  - h5py
+  - tqdm
+  - pathos
+  - corner
+  - cuda
+  - cudatoolkit
+prefix: C:\Users\lukas\anaconda3\envs\compla
