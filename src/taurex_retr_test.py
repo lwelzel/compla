@@ -123,6 +123,8 @@ def get_target_data(planet_name):
 
     target = AliasedDict(target_data, aliases=col_names)
 
+    print(target)
+
     return target
 
 
@@ -248,9 +250,7 @@ if __name__ == "__main__":
     solution = opt.fit()
     # taurex.log.disableLogging()
 
-    print(opt.fitting_parameters)
 
-    print(opt.derived_parameters)
 
     for solution, optimized_map, optimized_value, values in opt.get_solution():
         opt.update_model(optimized_map)
@@ -259,3 +259,10 @@ if __name__ == "__main__":
         plt.plot(obs.wavelengthGrid, obin.bin_model(tm.model(obs.wavenumberGrid))[1], label='TM')
         plt.legend()
         plt.show()
+
+
+    filen = [
+        "solution", "optimized_map", "optimized_value", "values"
+    ]
+    for i, el in enumerate(opt.get_solution()):
+        np.save(filen[i] + '.npy', el)

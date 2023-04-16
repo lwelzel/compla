@@ -12,20 +12,13 @@ from taurex import OutputSize
 from taurex.output.hdf5 import HDF5Output
 from taurex.util.output import store_contributions
 
-# import mpi4py
-# mpi4py.rc.initialize = True  # do not initialize MPI automatically
-# mpi4py.rc.finalize = False    # do not finalize MPI automatically
-#
-# from mpi4py import MPI  # import the 'MPI' module
-
-
 WDIR = Path().cwd().parent
 
-def run_retrieval(input_file_path=None, output_file_path=None):
-    if input_file_path is None:
-        input_file_path = str(WDIR / "data/retrievals/SYNTHETIC/default_synthetic_single_ultranest.par")
-    if output_file_path is None:
-        output_file_path = str(WDIR / "data/retrievals/SYNTHETIC/default_synthetic_single_out.hdf5")
+if __name__ == "__main__":
+    input_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_ultranest1.par")
+    output_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_out1.hdf5")
+    output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_spectrum1.txt")
+    output_size = OutputSize.heavy
 
     # setup config parser
     pp = ParameterParser()
@@ -77,12 +70,16 @@ def run_retrieval(input_file_path=None, output_file_path=None):
     inst_result = None
     if instrument is not None:
         inst_result = instrument.model_noise(
-            model, model_res=model.model(), num_observations=num_obs)
+            model,
+            model_res=model.model(),
+            num_observations=num_obs
+        )
 
     # Observation on self
     if observation == 'self':
         from taurex.data.spectrum import ArraySpectrum
         from taurex.util.util import wnwidth_to_wlwidth
+
         inst_wngrid, inst_spectrum, inst_noise, inst_width = inst_result
 
         inst_wlgrid = 10000 / inst_wngrid
@@ -113,6 +110,7 @@ def run_retrieval(input_file_path=None, output_file_path=None):
     if observation == 'self':
         from taurex.data.spectrum import ArraySpectrum
         from taurex.util.util import wnwidth_to_wlwidth
+
         inst_wngrid, inst_spectrum, inst_noise, inst_width = inst_result
 
         inst_wlgrid = 10000 / inst_wngrid
@@ -123,39 +121,55 @@ def run_retrieval(input_file_path=None, output_file_path=None):
                        inst_noise, inst_wlwidth]).T)
         binning = observation.create_binner()
 
-    # setup optimizer, not the changes
-    optimizer = pp.generate_optimizer()  # multi_nest_path=multi_nest_path)
-    optimizer.set_model(model)
-    optimizer.set_observed(observation)
-    pp.setup_optimizer(optimizer)
+        model = model.model(wngrid=inst_wlwidth)
 
     # output hdf5
     with HDF5Output(output_file_path) as o:
         model.write(o)
 
-    # solve problem
-    output_size = OutputSize.heavy
-
-    # MPI.Init()  # manual initialization of the MPI environment
-    solution = optimizer.fit(output_size=output_size)
-    # MPI.Finalize()  # manual finalization of the MPI environment
-
-    # apply solution to fw model parameters
-    for _, optimized, _, _ in optimizer.get_solution():
-        optimizer.update_model(optimized)
-        break
     result = model.model()
 
-    # write output
+    from taurex.util.util import wnwidth_to_wlwidth, compute_bin_edges
+
+    save_wnwidth = compute_bin_edges(wngrid)[1]
+    save_wl = 10000 / wngrid
+    save_wlwidth = wnwidth_to_wlwidth(wngrid, save_wnwidth)
+    save_model = binning.bin_model(result)[1]
+    save_error = np.zeros_like(save_wl)
+    if inst_result is not None:
+        inst_wngrid, inst_spectrum, inst_noise, inst_width = inst_result
+
+        save_model = inst_spectrum
+        save_wl = 10000 / inst_wngrid
+
+        save_wlwidth = wnwidth_to_wlwidth(inst_wngrid, inst_width)
+
+        save_error = inst_noise
+
+    np.savetxt(output_spectrum_file_path,
+               np.vstack((save_wl, save_model, save_error,
+                          save_wlwidth)).T)
+
+
+    # Output taurex data
     with HDF5Output(output_file_path, append=True) as o:
+
         out = o.create_group('Output')
         if observation is not None:
             obs = o.create_group('Observed')
             observation.write(obs)
 
         profiles = model.generate_profiles()
-        spectrum = binning.generate_spectrum_output(result,
+        spectrum = \
+            binning.generate_spectrum_output(result,
                                              output_size=output_size)
+
+        if inst_result is not None:
+            spectrum['instrument_wngrid'] = inst_result[0]
+            spectrum['instrument_wnwidth'] = inst_result[-1]
+            spectrum['instrument_wlgrid'] = 10000 / inst_result[0]
+            spectrum['instrument_spectrum'] = inst_result[1]
+            spectrum['instrument_noise'] = inst_result[2]
 
         try:
             spectrum['Contributions'] = \
@@ -163,21 +177,3 @@ def run_retrieval(input_file_path=None, output_file_path=None):
                                     output_size=output_size - 3)
         except Exception:
             pass
-
-        if solution is not None:
-            out.store_dictionary(solution, group_name='Solutions')
-            priors = {}
-            priors['Profiles'] = profiles
-            priors['Spectra'] = spectrum
-            out.store_dictionary(priors, group_name='Priors')
-        else:
-            out.store_dictionary(profiles, group_name='Profiles')
-            out.store_dictionary(spectrum, group_name='Spectra')
-
-        if optimizer:
-            optimizer.write(o)
-
-
-if __name__ == "__main__":
-    run_retrieval()
-    print("============================ DONE ============================")
