@@ -609,16 +609,25 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     # if path is not None and filename is not None and settings["optimizer"] == "ultranest":
     #     settings = {**settings, **{"log_dir": str(Path(path) / Path(filename).stem)}}
 
+    # settings = {**settings,
+    #             **{
+    #                 "optimizer": "ultranest",
+    #                 "num_live_points": 400,
+    #                 'dlogz': 0.8,
+    #                 "dkl": 0.8,
+    #                 'max_num_improvement_loops': 1,
+    #                 "stepsampler": "RegionBallSliceSampler",
+    #                 "log_dir": str(Path(path) / Path(filename).stem),
+    #             }}
+
     settings = {**settings,
                 **{
-                    "optimizer": "ultranest",
-                    "num_live_points": 400,
-                    'dlogz': 0.8,
-                    "dkl": 0.8,
-                    'max_num_improvement_loops': 1,
-                    "stepsampler": "RegionBallSliceSampler",
-                    "log_dir": str(Path(path) / Path(filename).stem),
+                    "optimizer": "multinest",
+                    "nlive": 400,
+                    "updInt": 10,
+                    "root": str(Path(path) / Path(filename).stem),
                 }}
+
     return {"Optimizer": settings}
 
 
