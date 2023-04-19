@@ -23,9 +23,9 @@ WDIR = Path().cwd().parent
 
 def run_retrieval(input_file_path=None, output_file_path=None):
     if input_file_path is None:
-        input_file_path = str(WDIR / "data/retrievals/SYNTHETIC/default_synthetic_single_ultranest.par")
+        raise NotImplementedError
     if output_file_path is None:
-        output_file_path = str(WDIR / "data/retrievals/SYNTHETIC/default_synthetic_single_out.hdf5")
+        output_file_path = str(Path(input_file_path).parent / Path(input_file_path).stem / Path(input_file_path).name).replace(".par", "_output.hdf5")
 
     # setup config parser
     pp = ParameterParser()
@@ -130,8 +130,13 @@ def run_retrieval(input_file_path=None, output_file_path=None):
     pp.setup_optimizer(optimizer)
 
     # output hdf5
+    #  TODO:
+    output_file_path = str(Path(output_file_path).parent.parent / (Path(output_file_path).stem + ".hdf5"))
     with HDF5Output(output_file_path) as o:
         model.write(o)
+
+
+
 
     # solve problem
     output_size = OutputSize.heavy
@@ -179,5 +184,7 @@ def run_retrieval(input_file_path=None, output_file_path=None):
 
 
 if __name__ == "__main__":
-    run_retrieval()
-    print("============================ DONE ============================")
+
+    test_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Sing+2016,TM1/HAT-P-1b_HST_STIS_G430L_52X2_Sing+2016,TM1_time-2023-04-18-10-07-50.par")
+
+    run_retrieval(input_file_path=test_path)

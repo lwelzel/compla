@@ -14,6 +14,7 @@ from datetime import datetime
 from configobj import ConfigObj, Section
 import shutil
 from tempfile import NamedTemporaryFile
+from src.retrieval_structure_handler import get_path_filename
 
 WDIR = Path().cwd().parent
 
@@ -60,6 +61,7 @@ class AliasedDict(dict):
     aliases: dict
 
     def __init__(self, data: dict, aliases: dict):
+        self.data = data
         super().__init__(data)
         self.aliases = aliases
 
@@ -132,45 +134,62 @@ def make_Global_dict(settings=None, **kwargs):
     return {"Global": global_dict}
 
 
-def make_Obs_ObsFit_dict(path_list=None, fit_list=None, fitting_bounds=None, fitting_mode="linear", **kwargs):
+def make_Obs_ObsFit_dict(path_list=None, fit_list=None, fitting_bounds=None, fitting_mode="linear", settings=None,
+                         **kwargs):
     if path_list is None:
         raise ValueError
 
-    observation_dict = {
-        'observation': 'spectra_w_offsets',
-        'path_spectra': [str(p) for p in path_list],
-        'offsets': ["0.0"] * len(path_list),
-        'slopes': ["0.0"] * len(path_list),
-    }
+    if isinstance(path_list, list) and not len(path_list) == 1:
+        observation_dict = {
+            'observation': 'spectra_w_offsets',
+            'path_spectra': [str(p) for p in path_list],
+            'offsets': ["0.0"] * len(path_list),
+            'slopes': ["0.0"] * len(path_list),
+        }
 
-    if fitting_bounds is None:
-        fitting_bounds = ['-1e-15', '1e-15']
+        if fitting_bounds is None:
+            fitting_bounds = ['-1e-15', '1e-15']
 
-    if fit_list is None:
-        fit_list = list(np.full_like(path_list, fill_value=True, dtype=bool))
-        fit_list[0] = False
+        if fit_list is None:
+            fit_list = list(np.full_like(path_list, fill_value=True, dtype=bool))
+            fit_list[0] = False
 
-    if isinstance(fitting_bounds[0], (str, float)) and isinstance(fitting_mode, str):
-        fitting_dict = {}
-        for i, (__, fit) in enumerate(zip(path_list, fit_list)):
-            obs_fit_dict = {
-                f'Offset_{i + 1}:fit': fit,
-                f'Offset_{i + 1}:prior': f"Uniform(bounds=({fitting_bounds[0]}, {fitting_bounds[1]}))",
-                f'Slope_{i + 1}:fit': fit,
-                f'Slope_{i + 1}:prior': f"Uniform(bounds=({fitting_bounds[0]}, {fitting_bounds[1]}))",
-            }
+        if isinstance(fitting_bounds[0], (str, float)) and isinstance(fitting_mode, str):
+            fitting_dict = {}
+            for i, (__, fit) in enumerate(zip(path_list, fit_list)):
+                obs_fit_dict = {
+                    f'Offset_{i + 1}:fit': fit,
+                    f'Offset_{i + 1}:prior': f"Uniform(bounds=({fitting_bounds[0]}, {fitting_bounds[1]}))",
+                    f'Slope_{i + 1}:fit': False,
+                    f'Slope_{i + 1}:prior': f"Uniform(bounds=({fitting_bounds[0]}, {fitting_bounds[1]}))",
+                }
 
-            fitting_dict = {**fitting_dict, **obs_fit_dict}
-    elif fitting_mode != "linear":
-        raise NotImplementedError(f"Only linear fitting is implemented. Requested: {fitting_mode}")
+                fitting_dict = {**fitting_dict, **obs_fit_dict}
+        elif fitting_mode != "linear":
+            raise NotImplementedError(f"Only linear fitting is implemented. Requested: {fitting_mode}")
+        else:
+            raise NotImplementedError("Only same options for each observation fit is supported.")
+
+        out_dict = {
+            'Observation': observation_dict,
+            'Fitting': fitting_dict,
+        }
+        return out_dict
+
+    elif isinstance(path_list, str) or len(path_list) == 1:
+        if isinstance(path_list, list):
+            path_list = path_list[0]
+
+        observation_dict = {
+            'observed_spectrum': path_list,
+        }
+        out_dict = {
+            'Observation': observation_dict,
+            'Fitting': {},
+        }
+        return out_dict
     else:
-        raise NotImplementedError("Only same options for each observation fit is supported.")
-
-    out_dict = {
-        'Observation': observation_dict,
-        'Fitting': fitting_dict,
-    }
-    return out_dict
+        raise NotImplementedError(f"Path list not accepted. Input path_list: {path_list}")
 
 
 def make_Chem_dict(molecule_dp_path=MOLECULE_PATH, which_molecules=None,
@@ -249,11 +268,78 @@ def make_Chem_dict(molecule_dp_path=MOLECULE_PATH, which_molecules=None,
     return {"Chemistry": chemistry_dict, "Fitting": fitting_dict}
 
 
+def make_FastChem_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=None,
+                       which_ratios=None, which_ratios_val=None,
+                       fit_list=None, fit_bounds=None, fit_modes=None,
+                       settings=None, **kwargs):
+
+
+    # TODO: unpack, into which gasses, k, v
+    gas_para_db = read_json_file(MOLECULE_PATH)
+
+    if which_molecules is None:
+        which_molecules = ["H", "He", "C", "N", "O",'N','K','e-']
+
+    if which_ratios is None:
+        which_ratios = ["C",  # _to_O
+                        # "N",  # _to_O
+                        ]
+    if which_ratios_val is None:
+        which_ratios_val = [0.5,
+                            # 1e-3,
+                            ]
+        # which_ratios_val = [1. for __ in which_ratios]
+
+
+    if fit_bounds is None:
+        fit_bounds = [[1e-2, 2.] for __ in which_ratios]
+
+    if fit_modes is None:
+        fit_modes = ["LogUniform(lin_bounds=({}, {}))"] * len(which_ratios)
+
+    if fit_list is None:
+        fit_list = list(np.full(len(which_ratios),
+                                fill_value=True,
+                                dtype=bool))
+
+    # solar_metallicity = 0.0196
+    # try:
+    #     metallicity = float(target.data['st_metratio']) / solar_metallicity
+    # except ValueError:
+    #     metallicity = 10 ** float(target.data['st_met']) * solar_metallicity
+
+    chemistry_dict = {
+        "chemistry_type": "fastchem",
+        "metallicity": 1.,  # Metallicity relative to initial abundance
+        # "selected_elements": which_molecules,  # Do not select any -> defaults to all
+        "ratio_elements": which_ratios,
+        "ratios_to_O": which_ratios_val,
+        "with_ions": True,
+    }
+
+    fitting_dict = {
+        "metallicity:fit": True,
+        "metallicity:prior": "LogUniform(bounds=(-2, 2))",
+    }
+
+    # assert len(np.unique([len(l) for l in [which_ratios, fit_list, fit_bounds, fit_modes]])) == 1
+
+    # TODO: add gas_type as attr to json separate from type? for .par files
+    for i, (ratio, fit_, fit_bounds, fit_mode) in enumerate(zip(which_ratios, fit_list, fit_bounds, fit_modes)):
+        fit_dict = {
+            f'{ratio}_O_ratio:fit': fit_,
+            f'{ratio}_O_ratio:prior': fit_mode.format(fit_bounds[0], fit_bounds[1]),
+        }
+
+        fitting_dict = {**fitting_dict, **fit_dict}
+
+    return {"Chemistry": chemistry_dict, "Fitting": fitting_dict}
+
 def make_Temp_dict(target=None, settings=None, which=None, **kwargs):
     if target is None:
         raise ValueError
 
-    if settings is None:
+    if settings is None or "Temperature" not in settings:
         settings = {}
 
     # TODO: default is isothermal. Check re npoint or Guillot2016/2018?
@@ -278,20 +364,20 @@ def make_Temp_dict(target=None, settings=None, which=None, **kwargs):
 
     # TODO: issues because errors are thrown if unexpected keys in Temperature config
     # overwrite partial if type key is same, overwrite fully if mismatch
-    return {"Temperature": {**default_dict, **settings}}
+    return {"Temperature": {**default_dict, **settings.get("Temperature", settings)}}
 
 
 def make_Press_dict(settings=None, **kwargs):
-    if settings is None:
+    if settings is None or "Pressure" not in settings:
         settings = {"profile_type": "simple"}
 
-    return {"Pressure": settings}
+    return {"Pressure": settings.get('Pressure', settings)}
 
 
 def make_Planet_dict(target=None, settings=None, **kwargs):
     if target is None:
         raise ValueError
-    if settings is None:
+    if settings is None or "Planet" not in settings:
         settings = {}
 
     keys_header = [
@@ -324,14 +410,14 @@ def make_Planet_dict(target=None, settings=None, **kwargs):
         except (KeyError, AssertionError):
             pass
 
-    return {"Planet": {**planet_dict, **settings}}
+    return {"Planet": {**planet_dict, **settings.get('Planet', settings)}}
 
 
 def make_Star_dict(target=None, settings=None, **kwargs):
     if target is None:
         raise ValueError
     # TODO: PHOENIX library normally used?
-    if settings is None:
+    if settings is None or "Star" not in settings:
         settings = {}
 
     keys_header = [
@@ -373,7 +459,7 @@ def make_Star_dict(target=None, settings=None, **kwargs):
 def make_FW_dict(target=None, settings=None, **kwargs):
     if target is None:
         raise ValueError
-    if settings is None:
+    if settings is None or "Model" not in settings:
         settings = {}
 
     model_dict = {
@@ -382,14 +468,21 @@ def make_FW_dict(target=None, settings=None, **kwargs):
         "CIA": {"cia_pairs": ['H2-H2', 'H2-He']},
         "Rayleigh": {},
         # "SimpleClouds": {"clouds_pressure": 0.1}, # OR:
-        # "ThickClouds": {"clouds_pressure": 0.1},
+        "ThickClouds": {"clouds_pressure": 1e3},
+        "HydrogenIon": {},
         # "LeeMie": {},  # OR:
         # 'BHMie': {},  # OR:
         # "FlatMie": {},
     }
 
-    return {"Model": {**model_dict, **settings}}
+    return {"Model": {**model_dict, **settings.get("Model", settings)}}
 
+
+def make_Bin_dict(settings=None, **kwargs):
+    if settings is None or "Binning" not in settings:
+        settings = {"bin_type": "observed"}
+
+    return {"Binning": settings.get("Binning", settings)}
 
 def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False, **kwargs):
     if target is None:
@@ -420,7 +513,8 @@ def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False
         },
         "planet_radius": {
             "fit": True,
-            "bounds": [0.5, 2.2],
+            "bounds": [0.5 * target["Planet Radius [Jupiter Radius]"],
+                       1.5 * target["Planet Radius [Jupiter Radius]"]],
             "prior": "Uniform(bounds=({}, {}))",
             "value": target["Planet Radius [Jupiter Radius]"]
         },
@@ -457,6 +551,12 @@ def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False
             "bounds": [1e4, 1e8],
             "prior": "LogUniform(lin_bounds=({}, {}))",
             "value": 1e6
+        },
+        "clouds_pressure": {
+            "fit": True,
+            "bounds": [1e-2, 1e5],
+            "prior": "LogUniform(lin_bounds=({}, {}))",
+            "value": 0.1
         },
         "nlayers": {
             "fit": False,
@@ -503,13 +603,34 @@ def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False
     return {"Fitting": {**fit_dict, **settings}}
 
 
-def make_Opt_dict(settings=None, **kwargs):
+def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
+    # if settings is None or "Optimizer" not in settings:
+    #     settings = {"optimizer": "nestle"}
+    # if path is not None and filename is not None and settings["optimizer"] == "ultranest":
+    #     settings = {**settings, **{"log_dir": str(Path(path) / Path(filename).stem)}}
 
-    if settings is None:
-        settings = {"optimizer": "nestle"}
-
+    settings = {**settings,
+                **{
+                    "optimizer": "ultranest",
+                    "num_live_points": 400,
+                    'dlogz': 0.8,
+                    "dkl": 0.8,
+                    'max_num_improvement_loops': 1,
+                    "stepsampler": "RegionBallSliceSampler",
+                    "log_dir": str(Path(path) / Path(filename).stem),
+                }}
     return {"Optimizer": settings}
 
+
+def make_Inst_dict(settings=None, **kwargs):
+    if settings is None or "Instrument" not in settings:
+        settings = {
+            "instrument": "snr",
+                    "SNR": 100000,
+                    "num_obs": 1,
+                    }
+
+    return {"Instrument": settings}
 
 def make_bounds_from_derived_para(para, *args, interval=None, mode=None, fit=True, **kwargs):
     if interval is None:
@@ -524,9 +645,6 @@ def make_bounds_from_derived_para(para, *args, interval=None, mode=None, fit=Tru
     }
 
     return {"Fitting": out}
-
-def make_prior_from_bounds_mode(bounds, mode):
-    return
 
 
 def make_Derive_dict():
@@ -563,18 +681,35 @@ def unpack_dicts(dicts, ignore_keys=None, ignore_overwrite=False):
     return out_dict
 
 
-def write_par_file(path_list, target, tm=None, which_molecules=None, comments=None,
-                   path=None, filename=None):
-    global_dict = make_Global_dict()
-    obs_dict = make_Obs_ObsFit_dict(path_list=path_list)
-    chem_dict = make_Chem_dict(which_molecules=which_molecules)
-    temp_dict = make_Temp_dict(target=target)
-    press_dict = make_Press_dict()
-    planet_dict = make_Planet_dict(target=target)
-    star_dict = make_Star_dict(target=target)
-    fw_dict = make_FW_dict(target=target)
-    fit_dict = make_Fit_dict(tm=tm, target=target, default=True)
-    opt_dict = make_Opt_dict()
+def write_par_file(path_list, target, tm=None, settings=None, which_molecules=None, comments=None,
+                   path=None, filename=None, fastchem=False, synthetic=False, ):
+    if isinstance(target, str):
+        target = get_target_data(target)
+
+    if settings is None:
+        settings = {}
+
+    time = ""
+    if path is None or filename is None:
+        time = f'_time-{datetime.now().isoformat(sep="-", timespec="seconds").replace(":", "-")}'
+        path, filename = get_path_filename(path_list, synthetic=synthetic)
+        path = str(Path(WDIR) / path)
+        os.makedirs(path, exist_ok=True)
+        filename = filename + time + ".par"
+
+    global_dict = make_Global_dict(settings=settings)
+    obs_dict = make_Obs_ObsFit_dict(path_list=path_list, settings=settings)
+    if fastchem:
+        chem_dict = make_FastChem_dict(target=target, which_molecules=which_molecules, settings=settings)
+    else:
+        chem_dict = make_Chem_dict(which_molecules=which_molecules, settings=settings)
+    temp_dict = make_Temp_dict(target=target, settings=settings)
+    press_dict = make_Press_dict(settings=settings)
+    planet_dict = make_Planet_dict(target=target, settings=settings)
+    star_dict = make_Star_dict(target=target, settings=settings)
+    fw_dict = make_FW_dict(target=target, settings=settings)
+    fit_dict = make_Fit_dict(tm=tm, target=target, default=True, settings=settings)
+    opt_dict = make_Opt_dict(settings=settings, path=path, filename=filename)
 
     dict_list = [
         global_dict,
@@ -589,6 +724,13 @@ def write_par_file(path_list, target, tm=None, which_molecules=None, comments=No
         opt_dict,
     ]
 
+    if synthetic:
+        bin_dict = make_Bin_dict(settings=settings)
+        inst_dict = make_Inst_dict(settings=settings)
+
+        dict_list.append(bin_dict)
+        dict_list.append(inst_dict)
+
     par_dict = unpack_dicts(dict_list)
 
     config = TaurexConfigObj(par_dict)
@@ -600,17 +742,18 @@ def write_par_file(path_list, target, tm=None, which_molecules=None, comments=No
             assert isinstance(c, str)
             config.initial_comment.append("# " + c)
 
-    if path is None:
-        dir_name = "DEFAULT"
-        path = str(WDIR / "data/retrievals" / dir_name)
-        os.makedirs(path, exist_ok=True)
-
-    if filename is None:
-        filename = "default.par"
+    # if path is None:
+    #     dir_name = "DEFAULT"
+    #     path = str(WDIR / "data/retrievals" / dir_name)
+    #     os.makedirs(path, exist_ok=True)
+    #
+    # if filename is None:
+    #     filename = "default.par"
 
     config.filename = str(Path(path) / filename)
-
     config_path = Path(path) / filename
+
+    os.makedirs(str(config_path).replace(str(config_path.suffix), ""), exist_ok=True)
 
     # Save the file to a temporary location if it exists
     temp_file = None
@@ -629,6 +772,8 @@ def write_par_file(path_list, target, tm=None, which_molecules=None, comments=No
             os.unlink(temp_file.name)
         raise e
 
+    return config_path / config.filename
+
 
 if __name__ == "__main__":
     path_list = [
@@ -636,6 +781,14 @@ if __name__ == "__main__":
         str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
     ]
 
+    path_list = [
+        # str(WDIR / "data/synthetic_spectra/HAT-P-1b" / "synthetic_HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014_transmission_spectrum_0.txt"),
+        str(WDIR / "data/synthetic_spectra/HAT-P-1b" / "synthetic_HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016_transmission_spectrum_1.txt"),
+    ]
+
+
     target = get_target_data("HAT-P-1 b")
 
-    write_par_file(path_list, target=target)
+    write_par_file(path_list, target=target, fastchem=True, synthetic=True)
+
+

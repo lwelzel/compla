@@ -1,3 +1,6 @@
+import os
+import pathlib
+
 import numpy as np
 import warnings
 from pathlib import Path
@@ -11,13 +14,26 @@ from taurex.parameter import ParameterParser
 from taurex import OutputSize
 from taurex.output.hdf5 import HDF5Output
 from taurex.util.output import store_contributions
+from par_file_writer import write_par_file
+from par_file_writer import get_target_data
 
 WDIR = Path().cwd().parent
 
-if __name__ == "__main__":
-    input_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_ultranest1.par")
-    output_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_out1.hdf5")
-    output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_spectrum1.txt")
+
+def make_synthetic_spectrum_from(input_file_path=None,
+                                 output_file_path=None,
+                                 output_spectrum_file_path=None,
+                                 num_obs=1,
+                                 offset=0.,
+                                 force_input_error=False, input_error=None):
+
+    if input_file_path is None:
+        input_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_ultranest1.par")
+    if output_file_path is None:
+        output_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_out1.hdf5")
+    if output_spectrum_file_path is None:
+        output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_spectrum1.txt")
+
     output_size = OutputSize.heavy
 
     # setup config parser
@@ -58,7 +74,6 @@ if __name__ == "__main__":
 
     instrument = pp.generate_instrument(binner=binning)
 
-    num_obs = 1
     if instrument is not None:
         instrument, num_obs = instrument
 
@@ -92,11 +107,10 @@ if __name__ == "__main__":
 
     instrument = pp.generate_instrument(binner=binning)
 
-    num_obs = 1
     if instrument is not None:
         instrument, num_obs = instrument
 
-    if observation == 'self' and instrument is None:
+    if True and instrument is None:  # if observation == 'self' and instrument is None:
         logging.getLogger('taurex').critical(
             'Instrument nust be specified when using self option')
         raise ValueError('No instruemnt specified for self option')
@@ -121,6 +135,8 @@ if __name__ == "__main__":
                        inst_noise, inst_wlwidth]).T)
         binning = observation.create_binner()
 
+        print(inst_wlwidth)
+
         model = model.model(wngrid=inst_wlwidth)
 
     # output hdf5
@@ -135,21 +151,28 @@ if __name__ == "__main__":
     save_wl = 10000 / wngrid
     save_wlwidth = wnwidth_to_wlwidth(wngrid, save_wnwidth)
     save_model = binning.bin_model(result)[1]
-    save_error = np.zeros_like(save_wl)
+
     if inst_result is not None:
         inst_wngrid, inst_spectrum, inst_noise, inst_width = inst_result
 
         save_model = inst_spectrum
         save_wl = 10000 / inst_wngrid
 
+        print(save_wl)
+        print(save_model)
+
         save_wlwidth = wnwidth_to_wlwidth(inst_wngrid, inst_width)
 
         save_error = inst_noise
 
-    np.savetxt(output_spectrum_file_path,
-               np.vstack((save_wl, save_model, save_error,
-                          save_wlwidth)).T)
+    if force_input_error and input_error is not None:
+        save_error = np.flip(input_error)
 
+    np.savetxt(output_spectrum_file_path,
+               np.vstack((save_wl,
+                          save_model + np.mean(save_model) * offset,
+                          save_error,
+                          save_wlwidth)).T)
 
     # Output taurex data
     with HDF5Output(output_file_path, append=True) as o:
@@ -159,21 +182,55 @@ if __name__ == "__main__":
             obs = o.create_group('Observed')
             observation.write(obs)
 
-        profiles = model.generate_profiles()
-        spectrum = \
-            binning.generate_spectrum_output(result,
-                                             output_size=output_size)
+def make_synthetic_spectrum(name, base_spectrum_list, offset=0.):
+    target = get_target_data(name)
 
-        if inst_result is not None:
-            spectrum['instrument_wngrid'] = inst_result[0]
-            spectrum['instrument_wnwidth'] = inst_result[-1]
-            spectrum['instrument_wlgrid'] = 10000 / inst_result[0]
-            spectrum['instrument_spectrum'] = inst_result[1]
-            spectrum['instrument_noise'] = inst_result[2]
+    path = str(Path(WDIR / f"data/synthetic_spectra/{name.replace(' ', '')}"))
+    os.makedirs(path, exist_ok=True)
 
-        try:
-            spectrum['Contributions'] = \
-                store_contributions(binning, model,
-                                    output_size=output_size - 3)
-        except Exception:
-            pass
+    if isinstance(base_spectrum_list, list) and len(base_spectrum_list) > 1 and isinstance(offset, float):
+        offset = np.array([offset for __ in base_spectrum_list])
+        offset[0] = 0.
+    if isinstance(offset, float):
+        offset = [offset]
+    if isinstance(base_spectrum_list, str):
+        base_spectrum_list = [base_spectrum_list]
+
+    for i, (spectrum, single_offset) in enumerate(zip(base_spectrum_list, offset)):
+        in_name = Path(spectrum).stem
+
+        filename = f"synthetic_{in_name}_{i}.par"
+
+        par_file_path = str(Path(path) / filename)
+
+        write_par_file(spectrum,
+                       target=target, fastchem=False, synthetic=True,
+                       path=path, filename=filename,
+                       comments=["Synthetic spectrum with forced errors like in the input file."])
+
+        base_spectrum = np.loadtxt(spectrum).T
+        base_spectrum_errors = base_spectrum[2].flatten()
+
+        spec_file_name = f"synthetic_{in_name}_transmission_spectrum_{i}.txt"
+
+        h5_file_name = f"synthetic_{in_name}_data_{i}.hdf5"
+
+        make_synthetic_spectrum_from(input_file_path=par_file_path,
+                                     output_file_path=str(Path(path) / h5_file_name),
+                                     output_spectrum_file_path=str(Path(path) / spec_file_name),
+                                     offset=single_offset,
+                                     force_input_error=True, input_error=base_spectrum_errors,
+                                     )
+
+if __name__ == "__main__":
+    num_obs = 1
+    input_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_ultranest1.par")
+    output_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_out1.hdf5")
+    output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_spectrum1.txt")
+
+    path_list = [
+        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+    ]
+
+    make_synthetic_spectrum("HAT-P-1 b", base_spectrum_list=path_list)

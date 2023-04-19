@@ -30,6 +30,18 @@ SPECTRA_LW_PATH = str(WDIR / "data/taurex_lightcurves_LW")
 def parse_file_names(file_names):
     parsed_data = []
 
+    if isinstance(file_names, str):
+        file_names = [file_names]
+
+    file_names = [Path(filename).name for filename in file_names]
+
+    synthetic = False
+    if np.any(["synthetic_" in filename for filename in file_names]):
+        synthetic = True
+
+    file_names = [filename.replace("synthetic_", "") for filename in file_names]
+    file_names = [re.sub(r'_transmission_spectrum_(\d+)\.txt', r',TM\1', filename) for filename in file_names]
+
     for file_name in file_names:
         file_name = file_name.rstrip('.txt')
 
@@ -52,15 +64,19 @@ def parse_file_names(file_names):
                 'planet_name': properties[0],
                 'facility': "HST",
                 'instrument': "WFC3",
+                'source': "Edwards+2022",
                 'spectral_element': properties[1]
             }
         else:
             print(f"Invalid file format: {file_name}")
             continue
 
+        for s in ["-b", "-c", "-d", "-e", "-f", ]:
+            file_data['planet_name'] = file_data['planet_name'].replace(s, s.replace("-", ""))
+
         parsed_data.append(file_data)
 
-    return parsed_data
+    return parsed_data, synthetic
 
 def merge_dicts(dict_list):
     merged_dict = {}
@@ -80,21 +96,44 @@ def merge_dicts(dict_list):
 
 def create_filename(merged_dict):
     keys_in_order = ['planet_name', 'facility', 'instrument', 'spectral_element']
-    not_common_keys = [key for key in merged_dict if key not in keys_in_order]
+    ignore_keys = ["bandwidth"]
+    not_common_keys_in_order = [
+        "aperture",
+        "source",
+    ]
+    not_common_keys = [key for key in not_common_keys_in_order if key in merged_dict.keys() and key not in keys_in_order and key not in ignore_keys]
+
 
     if isinstance(merged_dict['planet_name'], list):
         raise ValueError("Planet name must be common among all entries")
 
-    common_part = '_'.join([merged_dict[key] for key in keys_in_order if not isinstance(merged_dict[key], list)])
-    not_common_part = '_'.join([f"{key}(" + '_'.join([f"{value}" for value in merged_dict[key]]) + ")" for key in keys_in_order + not_common_keys if isinstance(merged_dict[key], list)])
+    common_part = '_'.join([merged_dict[key] for key in keys_in_order
+                            if (not isinstance(merged_dict[key], list) or len(merged_dict[key]) == 1)])
+    not_common_part = []
+    for key in keys_in_order + not_common_keys:
+        if isinstance(merged_dict[key], list):
+            not_common_part.append(f"{key}(" + '_'.join(sorted([f"{value}" for value in merged_dict[key]])) + ")")
+        elif key in not_common_keys and isinstance(merged_dict[key], str):
+            not_common_part.append(merged_dict[key])
+
+    not_common_part = "_".join(not_common_part)
+
+    # not_common_part = '_'.join([f"{key}(" + '_'.join(sorted([f"{value}" for value in merged_dict[key]])) + ")"
+    #                             for key in keys_in_order + not_common_keys
+    #                             if isinstance(merged_dict[key], list)
+    #                             else [merged_dict[key]] if isinstance(merged_dict[key], str)])
 
     filename = f"{common_part}_{not_common_part}"
     return filename
 
 
-def create_path(merged_dict):
-    base_path = Path("/data/retrievals")
-    keys_in_order = ['planet_name', 'facility', 'instrument', 'spectral_element']
+def create_path(merged_dict, synthetic=False):
+    if synthetic:
+        base_path = Path("/data/synthetic_spectra")
+    else:
+        base_path = Path("/data/retrievals")
+
+    keys_in_order = ['planet_name', ]  # 'facility', 'instrument', 'spectral_element']
 
     common_keys = []
     for key in keys_in_order:
@@ -106,7 +145,32 @@ def create_path(merged_dict):
     path_parts = [base_path] + [merged_dict[key] for key in common_keys] + [new_directory]
     path = Path(*path_parts)
 
-    return path
+    return str(path)[1:]
+
+
+def get_path_filename(file_names, synthetic=False):
+    dicts, _synthetic = parse_file_names(file_names)
+    show_new_path = False
+    if _synthetic != synthetic and synthetic is False:
+        show_new_path = True
+        warnings.warn(f"Path parser was set to write non-synthetic files but input looks synthetic. Setting synthetic to True.\n"
+                      f"\tInput files: {file_names}"
+                      )
+        synthetic = True
+
+    merged = merge_dicts(dicts)
+    path = create_path(merged, synthetic=synthetic)
+    if show_new_path:
+        print(f"Setting new path to -> {path}")
+    filename = create_filename(merged)
+
+    return path, filename
+
+
+def get_retrieval_path():
+    pass
+
+
 
 if __name__ == "__main__":
     file_data1 = {
@@ -138,10 +202,13 @@ if __name__ == "__main__":
 
     proplist = [file_data1, file_data2, file_data3]
 
-    merged = merge_dicts(proplist)
-    path = create_path(merged)
-    filename = create_filename(merged)
+    file_names = [
+        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+        str(WDIR / "data/SpectraBE" / "HAT-P-1b_G141.txt")
+    ]
 
-    print(merged)
+    path, filename = get_path_filename(file_names, synthetic=True)
+
     print(path)
     print(filename)

@@ -300,3 +300,5 @@ fabric.properties
 *.cia
 *.fmt
 *.par
+*.hdf5
+*.h5
