@@ -25,14 +25,15 @@ def make_synthetic_spectrum_from(input_file_path=None,
                                  output_spectrum_file_path=None,
                                  num_obs=1,
                                  offset=0.,
+                                 uid=0,
                                  force_input_error=False, input_error=None):
 
     if input_file_path is None:
-        input_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_ultranest1.par")
+        input_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014_time-2023-04-19-09-19-39.par")
     if output_file_path is None:
-        output_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_out1.hdf5")
+        output_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014_time-2023-04-19-09-19-39.hdf5")
     if output_spectrum_file_path is None:
-        output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_spectrum1.txt")
+        output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/synthetic_HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014_time-2023-04-19-09-19-39_transmission_spectrum_0.txt")
 
     output_size = OutputSize.heavy
 
@@ -135,8 +136,6 @@ def make_synthetic_spectrum_from(input_file_path=None,
                        inst_noise, inst_wlwidth]).T)
         binning = observation.create_binner()
 
-        print(inst_wlwidth)
-
         model = model.model(wngrid=inst_wlwidth)
 
     # output hdf5
@@ -157,9 +156,6 @@ def make_synthetic_spectrum_from(input_file_path=None,
 
         save_model = inst_spectrum
         save_wl = 10000 / inst_wngrid
-
-        print(save_wl)
-        print(save_model)
 
         save_wlwidth = wnwidth_to_wlwidth(inst_wngrid, inst_width)
 
@@ -182,7 +178,7 @@ def make_synthetic_spectrum_from(input_file_path=None,
             obs = o.create_group('Observed')
             observation.write(obs)
 
-def make_synthetic_spectrum(name, base_spectrum_list, offset=0.):
+def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=True):
     target = get_target_data(name)
 
     path = str(Path(WDIR / f"data/synthetic_spectra/{name.replace(' ', '')}"))
@@ -204,7 +200,7 @@ def make_synthetic_spectrum(name, base_spectrum_list, offset=0.):
         par_file_path = str(Path(path) / filename)
 
         write_par_file(spectrum,
-                       target=target, fastchem=False, synthetic=True,
+                       target=target, fastchem=fastchem, synthetic=True,
                        path=path, filename=filename,
                        comments=["Synthetic spectrum with forced errors like in the input file."])
 
@@ -223,14 +219,18 @@ def make_synthetic_spectrum(name, base_spectrum_list, offset=0.):
                                      )
 
 if __name__ == "__main__":
-    num_obs = 1
-    input_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_ultranest1.par")
-    output_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_out1.hdf5")
-    output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/DEFAULT/default_synthetic_spectrum1.txt")
+    # num_obs = 1
+    # input_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/"
+    #                              "HAT-P-1b_HST_STIS_G430L_52X2_Sing+2016/HAT-P-1b_HST_STIS_G430L_52X2_Sing+2016_time-2023-04-19-09-19-47.par")
+    # # input_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/"
+    # #                              "HAT-P-1b_HST_STIS_G430L_52X2_Sing+2016/HAT-P-1b_HST_STIS_G430L_52X2_Sing+2016_time-2023-04-19-09-19-47.par")
+    #
+    # output_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014")
+    # output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/")
 
     path_list = [
         str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
         str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
     ]
 
-    make_synthetic_spectrum("HAT-P-1 b", base_spectrum_list=path_list)
+    make_synthetic_spectrum("HAT-P-1 b", base_spectrum_list=path_list, fastchem=True)

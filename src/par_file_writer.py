@@ -22,7 +22,7 @@ PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
 MOLECULE_PATH = str(WDIR / "data/molecule_db.json")
 
 OPACITY_PATH = str(WDIR / "data/Input/xsec/xsec_sampled_R15000_0.3-15")
-CIA_PATH = str(WDIR / "data/Input/cia/hitran")
+CIA_PATH = str(WDIR / "data/Input/cia/HITRAN")
 KTABLE_PATH = str(WDIR / "data/Input/ktables/R100")
 
 SPECTRA_BE_PATH = str(WDIR / "data/SpectraBE")
@@ -609,24 +609,24 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     # if path is not None and filename is not None and settings["optimizer"] == "ultranest":
     #     settings = {**settings, **{"log_dir": str(Path(path) / Path(filename).stem)}}
 
-    # settings = {**settings,
-    #             **{
-    #                 "optimizer": "ultranest",
-    #                 "num_live_points": 400,
-    #                 'dlogz': 0.8,
-    #                 "dkl": 0.8,
-    #                 'max_num_improvement_loops': 1,
-    #                 "stepsampler": "RegionBallSliceSampler",
-    #                 "log_dir": str(Path(path) / Path(filename).stem),
-    #             }}
-
     settings = {**settings,
                 **{
-                    "optimizer": "multinest",
-                    "nlive": 400,
-                    "updInt": 10,
-                    "root": str(Path(path) / Path(filename).stem),
+                    "optimizer": "ultranest",
+                    "num_live_points": 400,
+                    'dlogz': 0.8,
+                    "dkl": 0.8,
+                    'max_num_improvement_loops': 1,
+                    "stepsampler": "RegionBallSliceSampler",
+                    "log_dir": str(Path(path) / Path(filename).stem),
                 }}
+
+    # settings = {**settings,
+    #             **{
+    #                 "optimizer": "multinest",
+    #                 # "nlive": 400,
+    #                 # "updInt": 10,
+    #                 # "root": str(Path(path) / Path(filename).stem), # not supported
+    #             }}
 
     return {"Optimizer": settings}
 
@@ -786,14 +786,14 @@ def write_par_file(path_list, target, tm=None, settings=None, which_molecules=No
 
 if __name__ == "__main__":
     path_list = [
-        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
-        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+        # str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
+        # str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
     ]
 
-    path_list = [
-        # str(WDIR / "data/synthetic_spectra/HAT-P-1b" / "synthetic_HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014_transmission_spectrum_0.txt"),
-        str(WDIR / "data/synthetic_spectra/HAT-P-1b" / "synthetic_HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016_transmission_spectrum_1.txt"),
-    ]
+    # path_list = [
+    #     # str(WDIR / "data/synthetic_spectra/HAT-P-1b" / "synthetic_HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014_transmission_spectrum_0.txt"),
+    #     # str(WDIR / "data/synthetic_spectra/HAT-P-1b" / "synthetic_HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016_transmission_spectrum_1.txt"),
+    # ]
 
 
     target = get_target_data("HAT-P-1 b")

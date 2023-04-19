@@ -35,4 +35,7 @@ if __name__ == "__main__":
         par_file_paths.append(outf)
 
     for path in par_file_paths:
-        run_retrieval(input_file_path=str(path))
+        try:
+            run_retrieval(input_file_path=str(path))
+        except BaseException as e:
+            print(e)
