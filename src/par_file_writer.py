@@ -129,6 +129,7 @@ def make_Global_dict(settings=None, **kwargs):
         "cia_path": str(CIA_PATH),
         "ktable_path": str(KTABLE_PATH),
         "opacity_method": "xsec",
+        "mpi_use_shared": True,
     }
 
     return {"Global": global_dict}
@@ -284,10 +285,14 @@ def make_FastChem_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=N
         which_ratios = ["C",  # _to_O
                         # "N",  # _to_O
                         ]
+        if len(which_ratios) == 1:
+            which_ratios = which_ratios[0]
     if which_ratios_val is None:
         which_ratios_val = [0.5,
                             # 1e-3,
                             ]
+        if len(which_ratios_val) == 1:
+            which_ratios_val = which_ratios_val[0]
         # which_ratios_val = [1. for __ in which_ratios]
 
 
@@ -354,7 +359,7 @@ def make_Temp_dict(target=None, settings=None, which=None, **kwargs):
         # rest is defaults for now
     }
     if which is None:
-        default_dict = default_guillot_dict
+        default_dict = default_iso_dict
     elif which == "isothermal":
         default_dict = default_iso_dict
     elif which == "guillot":
@@ -501,7 +506,7 @@ def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False
     elif tm is None and default:
         which = [
             "planet_radius",
-            "T_irr",
+            "T",
         ]
 
     default_fit_para = {
@@ -609,24 +614,24 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     # if path is not None and filename is not None and settings["optimizer"] == "ultranest":
     #     settings = {**settings, **{"log_dir": str(Path(path) / Path(filename).stem)}}
 
-    settings = {**settings,
-                **{
-                    "optimizer": "ultranest",
-                    "num_live_points": 400,
-                    'dlogz': 0.8,
-                    "dkl": 0.8,
-                    'max_num_improvement_loops': 1,
-                    "stepsampler": "RegionBallSliceSampler",
-                    "log_dir": str(Path(path) / Path(filename).stem),
-                }}
-
     # settings = {**settings,
     #             **{
-    #                 "optimizer": "multinest",
-    #                 # "nlive": 400,
-    #                 # "updInt": 10,
-    #                 # "root": str(Path(path) / Path(filename).stem), # not supported
+    #                 "optimizer": "ultranest",
+    #                 "num_live_points": 400,
+    #                 'dlogz': 0.5,
+    #                 "dkl": 0.5,
+    #                 'max_num_improvement_loops': 0,
+    #                 "stepsampler": "RegionBallSliceSampler",
+    #                 "log_dir": str(Path(path) / Path(filename).stem),
     #             }}
+
+    settings = {**settings,
+                **{
+                    "optimizer": "multinest",
+                    "num_live_points": 400,
+                    "max_iterations": 0,
+                    "multi_nest_path": str(Path(path) / Path(filename).stem),  # not supported?
+                }}
 
     return {"Optimizer": settings}
 

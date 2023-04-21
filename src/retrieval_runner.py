@@ -12,12 +12,7 @@ from taurex import OutputSize
 from taurex.output.hdf5 import HDF5Output
 from taurex.util.output import store_contributions
 
-# import mpi4py
-# mpi4py.rc.initialize = True  # do not initialize MPI automatically
-# mpi4py.rc.finalize = False    # do not finalize MPI automatically
-#
-# from mpi4py import MPI  # import the 'MPI' module
-
+from mpi4py import MPI  # import the 'MPI' module
 
 WDIR = Path().cwd().parent
 
@@ -135,15 +130,16 @@ def run_retrieval(input_file_path=None, output_file_path=None):
     with HDF5Output(output_file_path) as o:
         model.write(o)
 
-
-
-
     # solve problem
     output_size = OutputSize.heavy
 
-    # MPI.Init()  # manual initialization of the MPI environment
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    comm.Barrier()
     solution = optimizer.fit(output_size=output_size)
-    # MPI.Finalize()  # manual finalization of the MPI environment
+    comm.Barrier()
 
     # apply solution to fw model parameters
     for _, optimized, _, _ in optimizer.get_solution():
@@ -154,14 +150,28 @@ def run_retrieval(input_file_path=None, output_file_path=None):
     # write output
     with HDF5Output(output_file_path, append=True) as o:
         out = o.create_group('Output')
-        if observation is not None:
-            obs = o.create_group('Observed')
-            observation.write(obs)
-
-        profiles = model.generate_profiles()
-        spectrum = binning.generate_spectrum_output(result,
-                                             output_size=output_size)
-
+        try:
+            if observation is not None:
+                obs = o.create_group('Observed')
+                observation.write(obs)
+        except Exception:
+            pass
+        try:
+            profiles = model.generate_profiles()
+            spectrum = \
+                binning.generate_spectrum_output(result,
+                                                 output_size=output_size)
+        except Exception:
+            pass
+        try:
+            if inst_result is not None:
+                spectrum['instrument_wngrid'] = inst_result[0]
+                spectrum['instrument_wnwidth'] = inst_result[-1]
+                spectrum['instrument_wlgrid'] = 10000 / inst_result[0]
+                spectrum['instrument_spectrum'] = inst_result[1]
+                spectrum['instrument_noise'] = inst_result[2]
+        except Exception:
+            pass
         try:
             spectrum['Contributions'] = \
                 store_contributions(binning, model,
@@ -170,18 +180,31 @@ def run_retrieval(input_file_path=None, output_file_path=None):
             pass
 
         if solution is not None:
-            out.store_dictionary(solution, group_name='Solutions')
+            try:
+                out.store_dictionary(solution, group_name='Solutions')
+            except Exception:
+                pass
             priors = {}
-            priors['Profiles'] = profiles
-            priors['Spectra'] = spectrum
-            out.store_dictionary(priors, group_name='Priors')
+            try:
+                priors['Profiles'] = profiles
+            except Exception:
+                pass
+            try:
+                priors['Spectra'] = spectrum
+            except Exception:
+                pass
+            try:
+                out.store_dictionary(priors, group_name='Priors')
+            except Exception:
+                pass
         else:
             out.store_dictionary(profiles, group_name='Profiles')
             out.store_dictionary(spectrum, group_name='Spectra')
 
-        if optimizer:
+        try:
             optimizer.write(o)
-
+        except Exception:
+            pass
 
 if __name__ == "__main__":
 

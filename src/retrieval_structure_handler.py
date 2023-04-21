@@ -164,6 +164,14 @@ def get_path_filename(file_names, synthetic=False):
         print(f"Setting new path to -> {path}")
     filename = create_filename(merged)
 
+    pattern = r'_\d+$'
+    if isinstance(path, Path):
+        path = str(path)
+        path = re.sub(pattern, '', path)
+        path = Path(path)
+    else:
+        path = re.sub(pattern, '', path)
+
     return path, filename
 
 
