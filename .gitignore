@@ -301,4 +301,5 @@ fabric.properties
 *.fmt
 *.par
 *.hdf5
-*.h5
+*.points
+*.json

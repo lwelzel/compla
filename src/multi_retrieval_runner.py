@@ -42,6 +42,7 @@ def setup_joint_retrieval_paths(input_dir=None, input_list=None, which=None):
         raise NotImplementedError
 
     return out_file_list
+
 def main(file_dir, target_name, fastchem=True, synthetic=True):
     files = setup_joint_retrieval_paths(input_dir=file_dir)
 
@@ -49,7 +50,7 @@ def main(file_dir, target_name, fastchem=True, synthetic=True):
 
     par_file_paths = []
 
-    for f in files[-1:-2:-1]:
+    for f in files:
         outf = write_par_file(f, target=target, fastchem=fastchem, synthetic=synthetic)
         par_file_paths.append(outf)
       

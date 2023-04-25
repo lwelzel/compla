@@ -340,6 +340,33 @@ def make_FastChem_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=N
 
     return {"Chemistry": chemistry_dict, "Fitting": fitting_dict}
 
+def make_ACE_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=None,
+                       which_ratios=None, which_ratios_val=None,
+                       fit_list=None, fit_bounds=None, fit_modes=None,
+                       settings=None, **kwargs):
+
+    # solar_metallicity = 0.0196
+    # try:
+    #     metallicity = float(target.data['st_metratio']) / solar_metallicity
+    # except ValueError:
+    #     metallicity = 10 ** float(target.data['st_met']) * solar_metallicity
+
+    chemistry_dict = {
+        "chemistry_type": "ace",
+        "metallicity": 1.,  # Metallicity relative to initial abundance
+        "co_ratio": 0.5,
+    }
+
+    fitting_dict = {
+        "metallicity:fit": True,
+        "metallicity:prior": "LogUniform(lin_bounds=(-2, 2))",
+        "C_O_ratio:fit": True,
+        "C_O_ratio:prior": "LogUniform(lin_bounds=(1e-2, 2))",
+    }
+
+    return {"Chemistry": chemistry_dict, "Fitting": fitting_dict}
+
+
 def make_Temp_dict(target=None, settings=None, which=None, **kwargs):
     if target is None:
         raise ValueError
@@ -474,7 +501,7 @@ def make_FW_dict(target=None, settings=None, **kwargs):
         "Rayleigh": {},
         # "SimpleClouds": {"clouds_pressure": 0.1}, # OR:
         "ThickClouds": {"clouds_pressure": 1e3},
-        "HydrogenIon": {},
+        # "HydrogenIon": {}, TODO: manually enable for fastchem
         # "LeeMie": {},  # OR:
         # 'BHMie': {},  # OR:
         # "FlatMie": {},
@@ -628,8 +655,8 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     settings = {**settings,
                 **{
                     "optimizer": "multinest",
-                    "num_live_points": 1500,
-                    'evidence_tolerance': 0.1, # set to 6-8 for fast convergence testing
+                    "num_live_points": 500,
+                    'evidence_tolerance': 0.1,  # set to 6-8 for fast convergence testing
                     "max_iterations": 0,
                     "multi_nest_path": str(Path(path) / Path(filename).stem),  # not supported?
                 }}
@@ -697,7 +724,7 @@ def unpack_dicts(dicts, ignore_keys=None, ignore_overwrite=False):
 
 
 def write_par_file(path_list, target, tm=None, settings=None, which_molecules=None, comments=None,
-                   path=None, filename=None, fastchem=False, synthetic=False, ):
+                   path=None, filename=None, fastchem=False, ace=False, synthetic=False, ):
     if isinstance(target, str):
         target = get_target_data(target)
 
@@ -716,6 +743,8 @@ def write_par_file(path_list, target, tm=None, settings=None, which_molecules=No
     obs_dict = make_Obs_ObsFit_dict(path_list=path_list, settings=settings)
     if fastchem:
         chem_dict = make_FastChem_dict(target=target, which_molecules=which_molecules, settings=settings)
+    elif ace:
+        chem_dict = make_ACE_dict(target=target, which_molecules=which_molecules, settings=settings)
     else:
         chem_dict = make_Chem_dict(which_molecules=which_molecules, settings=settings)
     temp_dict = make_Temp_dict(target=target, settings=settings)

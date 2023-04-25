@@ -98,7 +98,12 @@ def run_retrieval_CLI(input_file_path=None, output_file_path=None, resume=False)
     cli_cd = f'cd "{str(WDIR / "src")}"'
     cli_command_standard = 'mpirun -n 8 python taurex --input "{0}" --output_file "{1}" --retrieval --light'
     cli_command_no_output = 'mpirun -n 8 python taurex --input "{0}" --retrieval --light'
+    cli_command_no_output = [f'mpirun', '-n 8', 'python taurex', '--input "{str(input_file_path)}"', '--retrieval', '--light']
     cli_output_only = 'taurex --input "{0}" --output_file "{1}" --retrieval --light'  # TODO: resume=True
+
+    __ = subprocess.run([cli_env_activation])
+    __ = subprocess.run([cli_cd])
+    __ = subprocess.run(cli_command_no_output)
 
 def solve_retrieval(input_file_path=None, output_file_path=None, resume=False):
     if input_file_path is None:

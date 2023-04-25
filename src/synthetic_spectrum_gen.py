@@ -178,7 +178,7 @@ def make_synthetic_spectrum_from(input_file_path=None,
             obs = o.create_group('Observed')
             observation.write(obs)
 
-def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=True):
+def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=False, ace=False):
     target = get_target_data(name)
 
     path = str(Path(WDIR / f"data/synthetic_spectra/{name.replace(' ', '')}"))
@@ -200,7 +200,7 @@ def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=True):
         par_file_path = str(Path(path) / filename)
 
         write_par_file(spectrum,
-                       target=target, fastchem=fastchem, synthetic=True,
+                       target=target, fastchem=fastchem, ace=ace, synthetic=True,
                        path=path, filename=filename,
                        comments=["Synthetic spectrum with forced errors like in the input file."])
 
@@ -236,7 +236,6 @@ if __name__ == "__main__":
     path_list = [
         str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
         str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Fischer+2016_NO-BW.txt"),
     ]
 
-    make_synthetic_spectrum("WASP-39 b", base_spectrum_list=path_list, fastchem=True)
+    make_synthetic_spectrum("WASP-39 b", base_spectrum_list=path_list, ace=True)
