@@ -16,7 +16,7 @@ from mpi4py import MPI  # import the 'MPI' module
 
 WDIR = Path().cwd().parent
 
-def run_retrieval(input_file_path=None, output_file_path=None):
+def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
     if input_file_path is None:
         raise NotImplementedError
     if output_file_path is None:
@@ -120,15 +120,20 @@ def run_retrieval(input_file_path=None, output_file_path=None):
 
     # setup optimizer, not the changes
     optimizer = pp.generate_optimizer()  # multi_nest_path=multi_nest_path)
+    if resume:
+        optimizer.resume = True
     optimizer.set_model(model)
     optimizer.set_observed(observation)
     pp.setup_optimizer(optimizer)
+    if resume:
+        optimizer.resume = True
 
     # output hdf5
     #  TODO:
-    output_file_path = str(Path(output_file_path).parent.parent / (Path(output_file_path).stem + ".hdf5"))
-    with HDF5Output(output_file_path) as o:
-        model.write(o)
+    if not resume:
+        output_file_path = str(Path(output_file_path).parent.parent / (Path(output_file_path).stem + ".hdf5"))
+        with HDF5Output(output_file_path) as o:
+            model.write(o)
 
     # solve problem
     output_size = OutputSize.light
