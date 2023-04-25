@@ -131,7 +131,7 @@ def run_retrieval(input_file_path=None, output_file_path=None):
         model.write(o)
 
     # solve problem
-    output_size = OutputSize.heavy
+    output_size = OutputSize.light
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()

@@ -228,9 +228,15 @@ if __name__ == "__main__":
     # output_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014")
     # output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/")
 
+    # path_list = [
+    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt"),
+    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"),
+    # ]
+    #
     path_list = [
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt"),
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Fischer+2016_NO-BW.txt"),
     ]
 
-    make_synthetic_spectrum("WASP-121 b", base_spectrum_list=path_list, fastchem=True)
+    make_synthetic_spectrum("WASP-39 b", base_spectrum_list=path_list, fastchem=True)

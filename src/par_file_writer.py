@@ -628,7 +628,8 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     settings = {**settings,
                 **{
                     "optimizer": "multinest",
-                    "num_live_points": 400,
+                    "num_live_points": 1500,
+                    'evidence_tolerance': 0.1, # set to 6-8 for fast convergence testing
                     "max_iterations": 0,
                     "multi_nest_path": str(Path(path) / Path(filename).stem),  # not supported?
                 }}
