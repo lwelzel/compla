@@ -22,6 +22,12 @@ def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
     if output_file_path is None:
         output_file_path = str(Path(input_file_path).parent / Path(input_file_path).stem / Path(input_file_path).name).replace(".par", "_output.hdf5")
 
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    comm.Barrier()
+
     # setup config parser
     pp = ParameterParser()
     pp.read(input_file_path)
@@ -117,9 +123,6 @@ def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
             np.vstack([inst_wlgrid, inst_spectrum,
                        inst_noise, inst_wlwidth]).T)
         binning = observation.create_binner()
-        
-    conf = pp._raw_config.dict()
-    print(conf["Fitting"])
 
     # setup optimizer, not the changes
     optimizer = pp.generate_optimizer()  # multi_nest_path=multi_nest_path)
@@ -141,10 +144,6 @@ def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
     # solve problem
     output_size = OutputSize.light
 
-    comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
-
     comm.Barrier()
     solution = optimizer.fit(output_size=output_size)
     comm.Barrier()
@@ -154,6 +153,8 @@ def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
         optimizer.update_model(optimized)
         break
     result = model.model()
+
+    comm.Barrier()
 
     # write output
     with HDF5Output(output_file_path, append=True) as o:
@@ -213,6 +214,8 @@ def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
             optimizer.write(o)
         except Exception:
             pass
+
+    comm.Barrier()
 
 if __name__ == "__main__":
 

@@ -17,6 +17,8 @@ import resource
 import platform
 import sys
 
+from mpi4py import MPI
+
 def setup_joint_retrieval_paths(input_dir=None, input_list=None, which=None):
     if input_dir is None and input_list is None:
         raise NotImplementedError
@@ -50,18 +52,54 @@ def main(file_dir, target_name, fastchem=False, ace=False, synthetic=True):
 
     par_file_paths = []
 
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
     for f in files:
         outf = write_par_file(f, target=target, fastchem=fastchem, ace=ace, synthetic=synthetic)
         par_file_paths.append(outf)
-      
+
+    comm.Barrier()
+    par_file_paths = comm.bcast(par_file_paths, root=0)
+    comm.Barrier()
 
     for path in par_file_paths:
         run_retrieval(input_file_path=str(path))
+        comm.Barrier()
 
 if __name__ == "__main__":
-    test_dir = WDIR / "data/synthetic_spectra/WASP-39b"
-    target_name = "WASP-39 b"
+    # test_dir = WDIR / "data/synthetic_spectra/WASP-121b"
+    # target_name = "WASP-39 b"
     synthetic = True
     ace = True
     fastchem = False
-    main(test_dir, target_name, synthetic=synthetic, fastchem=fastchem, ace=ace)
+    # main(test_dir, target_name, synthetic=synthetic, fastchem=fastchem, ace=ace)
+
+    names = [
+        "WASP-19 b",
+        "WASP-17 b",
+        "WASP-12 b",
+        "HD-189733 b",
+        "HAT-P-26 b",
+        "HAT-P-12 b",
+        "HAT-P-1 b",
+    ]
+
+    _dirs = [
+        "WASP-19b",
+        "WASP-17b",
+        "WASP-12b",
+        "HD-189733b",
+        "HAT-P-26b",
+        "HAT-P-12b",
+        "HAT-P-1b",
+    ]
+
+    dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
+
+    for direct, name in dirs, names:
+        try:
+            main(direct, name, synthetic=synthetic, fastchem=fastchem, ace=ace)
+        except BaseException:
+            pass

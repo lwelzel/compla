@@ -16,6 +16,8 @@ import shutil
 from tempfile import NamedTemporaryFile
 from src.retrieval_structure_handler import get_path_filename
 
+from mpi4py import MPI  # import the 'MPI' module
+
 WDIR = Path().cwd().parent
 
 PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
@@ -680,8 +682,8 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     settings = {**settings,
                 **{
                     "optimizer": "multinest",
-                    "num_live_points": 40,
-                    'evidence_tolerance': 8,  # set to 6-8 for fast convergence testing
+                    "num_live_points": 400,
+                    'evidence_tolerance': 0.5,  # set to 6-8 for fast convergence testing
                     "max_iterations": 0,
                     "multi_nest_path": str(Path(path) / Path(filename).stem),  # not supported?
                 }}
@@ -748,19 +750,20 @@ def unpack_dicts(dicts, ignore_keys=None, ignore_overwrite=False):
     return out_dict
 
 
-def write_par_file(path_list, target, tm=None, settings=None, which_molecules=None, comments=None,
-                   path=None, filename=None, fastchem=False, ace=False, synthetic=False, ):
+def _write_par_file(path_list, target, tm=None, settings=None, which_molecules=None, comments=None,
+                    path=None, filename=None, fastchem=False, ace=False, synthetic=False, ):
     if isinstance(target, str):
         target = get_target_data(target)
 
     if settings is None:
         settings = {}
 
-    time = ""
     if path is None or filename is None:
         time = f'_time-{datetime.now().isoformat(sep="-", timespec="seconds").replace(":", "-")}'
+
         path, filename = get_path_filename(path_list, synthetic=synthetic)
         path = str(Path(WDIR) / path)
+
         os.makedirs(path, exist_ok=True)
         filename = filename + time + ".par"
 
@@ -843,6 +846,21 @@ def write_par_file(path_list, target, tm=None, settings=None, which_molecules=No
 
     return config_path / config.filename
 
+
+def write_par_file(path_list, target, tm=None, settings=None, which_molecules=None, comments=None,
+                   path=None, filename=None, fastchem=False, ace=False, synthetic=False, ):
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    if rank == 0:
+        path = _write_par_file(path_list=path_list, target=target, tm=tm, settings=settings, which_molecules=which_molecules, comments=comments,
+                               path=path, filename=filename, fastchem=fastchem, ace=ace, synthetic=synthetic, )
+
+    comm.Barrier()
+    path = comm.bcast(path, root=0)
+
+    return path
 
 if __name__ == "__main__":
     path_list = [
