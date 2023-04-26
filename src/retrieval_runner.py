@@ -117,6 +117,9 @@ def run_retrieval(input_file_path=None, output_file_path=None, resume=False):
             np.vstack([inst_wlgrid, inst_spectrum,
                        inst_noise, inst_wlwidth]).T)
         binning = observation.create_binner()
+        
+    conf = pp._raw_config.dict()
+    print(conf["Fitting"])
 
     # setup optimizer, not the changes
     optimizer = pp.generate_optimizer()  # multi_nest_path=multi_nest_path)

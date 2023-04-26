@@ -161,8 +161,12 @@ def make_Obs_ObsFit_dict(path_list=None, fit_list=None, fitting_bounds=None, fit
                 obs_fit_dict = {
                     f'Offset_{i + 1}:fit': fit,
                     f'Offset_{i + 1}:prior': f"Uniform(bounds=({fitting_bounds[0]}, {fitting_bounds[1]}))",
+                    f'Offset_{i + 1}:bounds': fitting_bounds,
+                    f'Offset_{i + 1}:mode': "linear",
                     f'Slope_{i + 1}:fit': False,
                     f'Slope_{i + 1}:prior': f"Uniform(bounds=({fitting_bounds[0]}, {fitting_bounds[1]}))",
+                    f'Slope_{i + 1}:bounds': fitting_bounds,
+                    f'Slope_{i + 1}:mode': "linear",
                 }
 
                 fitting_dict = {**fitting_dict, **obs_fit_dict}
@@ -254,6 +258,8 @@ def make_Chem_dict(molecule_dp_path=MOLECULE_PATH, which_molecules=None,
         fit_dict = {
             f'{_gas["molecule"]}:fit': fit_,
             f'{_gas["molecule"]}:prior': fit_mode.format(fit_bounds[0], fit_bounds[1]),
+            f'{_gas["molecule"]}:bounds': fit_bounds,
+            f'{_gas["molecule"]}:mode': "log" if "Log" in fit_mode else "linear",
         }
 
         gases_dict = {**gases_dict, **gas_dict}
@@ -325,6 +331,8 @@ def make_FastChem_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=N
     fitting_dict = {
         "metallicity:fit": True,
         "metallicity:prior": "LogUniform(bounds=(-2, 2))",
+        "metallicity:bounds": [0.01, 100],
+        "metallicity:mode": "log",
     }
 
     # assert len(np.unique([len(l) for l in [which_ratios, fit_list, fit_bounds, fit_modes]])) == 1
@@ -334,6 +342,8 @@ def make_FastChem_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=N
         fit_dict = {
             f'{ratio}_O_ratio:fit': fit_,
             f'{ratio}_O_ratio:prior': fit_mode.format(fit_bounds[0], fit_bounds[1]),
+            f'{ratio}_O_ratio:bounds': fit_bounds,
+            f'{ratio}_O_ratio:mode': "log" if "Log" in fit_mode else "linear",
         }
 
         fitting_dict = {**fitting_dict, **fit_dict}
@@ -357,11 +367,22 @@ def make_ACE_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=None,
         "co_ratio": 0.5,
     }
 
+    ace_metallicity_bounds = [0.01, 10.]
+    ace_metallicity_prior = "Uniform(bounds=({}, {}))"
+    C_O_ratio_bounds = [1e-4, 1.]
+    C_O_ratio_prior = "Uniform(bounds=({}, {}))"
+
+
     fitting_dict = {
-        "metallicity:fit": True,
-        "metallicity:prior": "LogUniform(lin_bounds=(-2, 2))",
+        "ace_metallicity:fit": True,
+        "ace_metallicity:prior": ace_metallicity_prior.format(*ace_metallicity_bounds),
+        f'ace_metallicity:bounds': ace_metallicity_bounds,
+        f'ace_metallicity:mode': "log" if "Log" in ace_metallicity_prior else "linear",
+
         "C_O_ratio:fit": True,
-        "C_O_ratio:prior": "LogUniform(lin_bounds=(1e-2, 2))",
+        "C_O_ratio:prior": C_O_ratio_prior.format(*C_O_ratio_bounds),
+        f'C_O_ratio:bounds': C_O_ratio_bounds,
+        f'C_O_ratio:mode': "log" if "Log" in C_O_ratio_prior else "linear",
     }
 
     return {"Chemistry": chemistry_dict, "Fitting": fitting_dict}
@@ -562,13 +583,15 @@ def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False
         # },
         "T": {
             "fit": True,
-            "bounds": [500, 2500],
+            "bounds": [np.maximum(0.33 * target["Equilibrium Temperature [K]"], 300.),
+                       np.maximum(2. * target["Equilibrium Temperature [K]"], 2500.)],
             "prior": "Uniform(bounds=({}, {}))",
             "value": target["Equilibrium Temperature [K]"]
         },
         "T_irr": {
             "fit": True,
-            "bounds": [500, 2500],
+            "bounds": [np.maximum(0.33 * target["Equilibrium Temperature [K]"], 300.),
+                       np.maximum(2. * target["Equilibrium Temperature [K]"], 2500.)],
             "prior": "Uniform(bounds=({}, {}))",
             "value": target["Equilibrium Temperature [K]"]
         },
@@ -622,6 +645,8 @@ def make_Fit_dict(tm=None, target=None, which=None, settings=None, default=False
             para_fit_dict = {
                 f'{para}:fit': default_fit_para[para]["fit"],
                 f'{para}:prior': default_fit_para[para]["prior"].format(*default_fit_para[para]["bounds"]),
+                f'{para}:bounds': default_fit_para[para]["bounds"],
+                f'{para}:mode': "log" if "Log" in default_fit_para[para]["prior"] else "linear",
             }
 
             fit_dict = {**fit_dict, **para_fit_dict}
@@ -655,8 +680,8 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     settings = {**settings,
                 **{
                     "optimizer": "multinest",
-                    "num_live_points": 500,
-                    'evidence_tolerance': 0.1,  # set to 6-8 for fast convergence testing
+                    "num_live_points": 40,
+                    'evidence_tolerance': 8,  # set to 6-8 for fast convergence testing
                     "max_iterations": 0,
                     "multi_nest_path": str(Path(path) / Path(filename).stem),  # not supported?
                 }}
@@ -833,6 +858,6 @@ if __name__ == "__main__":
 
     target = get_target_data("HAT-P-1 b")
 
-    write_par_file(path_list, target=target, fastchem=True, synthetic=True)
+    write_par_file(path_list, target=target, fastchem=False, ace=True, synthetic=True)
 
 

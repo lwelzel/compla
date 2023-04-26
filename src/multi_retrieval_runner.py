@@ -5,7 +5,7 @@ WDIR = Path().cwd().parent
 
 import taurex.log
 import logging
-taurex.log.disableLogging()
+# taurex.log.disableLogging()
 import traceback
 
 import itertools
@@ -43,7 +43,7 @@ def setup_joint_retrieval_paths(input_dir=None, input_list=None, which=None):
 
     return out_file_list
 
-def main(file_dir, target_name, fastchem=True, synthetic=True):
+def main(file_dir, target_name, fastchem=False, ace=False, synthetic=True):
     files = setup_joint_retrieval_paths(input_dir=file_dir)
 
     target = get_target_data(target_name)
@@ -51,7 +51,7 @@ def main(file_dir, target_name, fastchem=True, synthetic=True):
     par_file_paths = []
 
     for f in files:
-        outf = write_par_file(f, target=target, fastchem=fastchem, synthetic=synthetic)
+        outf = write_par_file(f, target=target, fastchem=fastchem, ace=ace, synthetic=synthetic)
         par_file_paths.append(outf)
       
 
@@ -62,4 +62,6 @@ if __name__ == "__main__":
     test_dir = WDIR / "data/synthetic_spectra/WASP-39b"
     target_name = "WASP-39 b"
     synthetic = True
-    main(test_dir, target_name, synthetic=synthetic, fastchem=True)
+    ace = True
+    fastchem = False
+    main(test_dir, target_name, synthetic=synthetic, fastchem=fastchem, ace=ace)
