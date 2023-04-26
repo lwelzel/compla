@@ -303,3 +303,5 @@ fabric.properties
 *.hdf5
 *.points
 *.json
+
+/data
