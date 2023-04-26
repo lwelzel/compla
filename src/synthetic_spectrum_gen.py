@@ -19,6 +19,7 @@ from par_file_writer import get_target_data
 
 WDIR = Path().cwd().parent
 
+from mpi4py import MPI
 
 def make_synthetic_spectrum_from(input_file_path=None,
                                  output_file_path=None,
@@ -181,6 +182,10 @@ def make_synthetic_spectrum_from(input_file_path=None,
 def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=False, ace=False):
     target = get_target_data(name)
 
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
     path = str(Path(WDIR / f"data/synthetic_spectra/{name.replace(' ', '')}"))
     os.makedirs(path, exist_ok=True)
 
@@ -228,14 +233,67 @@ if __name__ == "__main__":
     # output_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014")
     # output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/")
 
-    # path_list = [
-    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt"),
-    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"),
-    # ]
-    #
     path_list = [
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"),
     ]
 
-    make_synthetic_spectrum("WASP-39 b", base_spectrum_list=path_list, ace=True)
+    # path_list = [
+    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
+    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+    # ]
+
+    _path_lists = [
+        [
+            "WASP-19-b_HST_WFC3_G141_IRSUB128_Huitson+2013.txt",
+            "WASP-19-b_HST_STIS_G430L_52X2_Huitson+2013.txt"
+        ],
+        [
+            "WASP-17-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
+            "WASP-17-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+        [
+            "WASP-12-b_HST_STIS_G430L_52X2_Sing+2013.txt",
+            "WASP-12-b_HST_WFC3_G141_GRISM256_Kreidberg+2015.txt"
+        ],
+        [
+            "HD-189733-b_HST_WFC3_G141_IRSUB128_Sing+2016.txt",
+            "HD-189733-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+        [
+            "HAT-P-26-b_HST_WFC3_G141_GRISM256_Wakeford+2017.txt",
+            "HAT-P-26-b_HST_STIS_G430L_52X2_Wakeford+2017.txt"
+        ],
+        [
+            "HAT-P-12-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
+            "HAT-P-12-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+        [
+            "HAT-P-1-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
+            "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ]
+      ]
+
+    names = [
+        "WASP-19 b",
+        "WASP-17 b",
+        "WASP-12 b",
+        "HD-189733 b",
+        "HAT-P-26 b",
+        "HAT-P-12 b",
+        "HAT-P-1 b",
+    ]
+
+    path_lists = []
+
+    for group in _path_lists:
+        g = []
+        for file in group:
+            g.append(str(WDIR / "data/taurex_lightcurves_LW" / file))
+        path_lists.append(g)
+
+
+    # make_synthetic_spectrum("WASP-121 b", base_spectrum_list=path_list, ace=True)
+
+    for path_list, name in path_lists, names:
+        make_synthetic_spectrum(name, base_spectrum_list=path_list, ace=True)
