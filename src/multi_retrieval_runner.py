@@ -5,7 +5,7 @@ WDIR = Path().cwd().parent
 
 import taurex.log
 import logging
-# taurex.log.disableLogging()
+taurex.log.disableLogging()
 import traceback
 
 import itertools
@@ -77,29 +77,35 @@ if __name__ == "__main__":
     # main(test_dir, target_name, synthetic=synthetic, fastchem=fastchem, ace=ace)
 
     names = [
-        "WASP-19 b",
-        "WASP-17 b",
-        "WASP-12 b",
-        "HD-189733 b",
-        "HAT-P-26 b",
-        "HAT-P-12 b",
-        "HAT-P-1 b",
+        # "WASP-19 b",
+        # "WASP-17 b",
+        # "WASP-12 b",
+        "HD 189733 b",
+        # "HAT-P-26 b",
+        # "HAT-P-12 b",
+        # "HAT-P-1 b",
     ]
 
     _dirs = [
-        "WASP-19b",
-        "WASP-17b",
-        "WASP-12b",
-        "HD-189733b",
-        "HAT-P-26b",
-        "HAT-P-12b",
-        "HAT-P-1b",
+        # "WASP-19b",
+        # "WASP-17b",
+        # "WASP-12b",
+        "HD189733b",
+        # "HAT-P-26b",
+        # "HAT-P-12b",
+        # "HAT-P-1b",
     ]
 
     dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
 
-    for direct, name in dirs, names:
+    for direct, name in zip(dirs, names):
         try:
             main(direct, name, synthetic=synthetic, fastchem=fastchem, ace=ace)
-        except BaseException:
+        except BaseException as e:
+            print(f"\n\n\n\n\n"
+                  f"==========================================================================================\n"
+                  f"Could not complete run for {name} from {direct}.\n"
+                  f"{e}\n"
+                  f"=========================================================================================="
+                  f"\n\n\n\n\n")
             pass

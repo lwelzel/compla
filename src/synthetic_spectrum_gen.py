@@ -244,44 +244,44 @@ if __name__ == "__main__":
     # ]
 
     _path_lists = [
-        [
-            "WASP-19-b_HST_WFC3_G141_IRSUB128_Huitson+2013.txt",
-            "WASP-19-b_HST_STIS_G430L_52X2_Huitson+2013.txt"
-        ],
-        [
-            "WASP-17-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
-            "WASP-17-b_HST_STIS_G430L_52X2_Sing+2016.txt"
-        ],
-        [
-            "WASP-12-b_HST_STIS_G430L_52X2_Sing+2013.txt",
-            "WASP-12-b_HST_WFC3_G141_GRISM256_Kreidberg+2015.txt"
-        ],
+        # [
+        #     "WASP-19-b_HST_WFC3_G141_IRSUB128_Huitson+2013.txt",
+        #     "WASP-19-b_HST_STIS_G430L_52X2_Huitson+2013.txt"
+        # ],
+        # [
+        #     "WASP-17-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
+        #     "WASP-17-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        # ],
+        # [
+        #     "WASP-12-b_HST_STIS_G430L_52X2_Sing+2013.txt",
+        #     "WASP-12-b_HST_WFC3_G141_GRISM256_Kreidberg+2015.txt"
+        # ],
         [
             "HD-189733-b_HST_WFC3_G141_IRSUB128_Sing+2016.txt",
             "HD-189733-b_HST_STIS_G430L_52X2_Sing+2016.txt"
         ],
-        [
-            "HAT-P-26-b_HST_WFC3_G141_GRISM256_Wakeford+2017.txt",
-            "HAT-P-26-b_HST_STIS_G430L_52X2_Wakeford+2017.txt"
-        ],
-        [
-            "HAT-P-12-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
-            "HAT-P-12-b_HST_STIS_G430L_52X2_Sing+2016.txt"
-        ],
-        [
-            "HAT-P-1-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
-            "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"
-        ]
+        # [
+        #     "HAT-P-26-b_HST_WFC3_G141_GRISM256_Wakeford+2017.txt",
+        #     "HAT-P-26-b_HST_STIS_G430L_52X2_Wakeford+2017.txt"
+        # ],
+        # [
+        #     "HAT-P-12-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
+        #     "HAT-P-12-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        # ],
+        # [
+        #     "HAT-P-1-b_HST_WFC3_G141_GRISM256_Sing+2016.txt",
+        #     "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        # ]
       ]
 
     names = [
-        "WASP-19 b",
-        "WASP-17 b",
-        "WASP-12 b",
-        "HD-189733 b",
-        "HAT-P-26 b",
-        "HAT-P-12 b",
-        "HAT-P-1 b",
+        # "WASP-19 b",
+        # "WASP-17 b",
+        # "WASP-12 b",
+        "HD 189733 b",
+        # "HAT-P-26 b",
+        # "HAT-P-12 b",
+        # "HAT-P-1 b",
     ]
 
     path_lists = []
@@ -295,5 +295,10 @@ if __name__ == "__main__":
 
     # make_synthetic_spectrum("WASP-121 b", base_spectrum_list=path_list, ace=True)
 
-    for path_list, name in path_lists, names:
-        make_synthetic_spectrum(name, base_spectrum_list=path_list, ace=True)
+    for path_list, name in zip(path_lists, names):
+        try:
+            make_synthetic_spectrum(name, base_spectrum_list=path_list, ace=True)
+        except IndexError as e:
+            print(f"\n\n\n\n Did not find planet {name}")
+            print(e)
+            print("\n\n\n\n")
