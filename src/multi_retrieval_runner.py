@@ -25,6 +25,8 @@ def setup_joint_retrieval_paths(input_dir=None, input_list=None, which=None):
     if input_dir is not None:
         spectra = Path(input_dir).glob("*transmission_spectrum*")
         spectra = list(spectra)
+    elif input_list is not None:
+        spectra = [Path(p) for p in input_list]
     else:
         raise NotImplementedError
 
@@ -45,8 +47,8 @@ def setup_joint_retrieval_paths(input_dir=None, input_list=None, which=None):
 
     return out_file_list
 
-def main(file_dir, target_name, fastchem=False, ace=False, synthetic=True):
-    files = setup_joint_retrieval_paths(input_dir=file_dir)
+def main(file_dir=None, input_list=None, target_name=None, fastchem=False, ace=False, synthetic=True):
+    files = setup_joint_retrieval_paths(input_dir=file_dir, input_list=input_list)
 
     target = get_target_data(target_name)
 
@@ -71,7 +73,7 @@ def main(file_dir, target_name, fastchem=False, ace=False, synthetic=True):
 if __name__ == "__main__":
     # test_dir = WDIR / "data/synthetic_spectra/WASP-121b"
     # target_name = "WASP-39 b"
-    synthetic = True
+    synthetic = False
     ace = True
     fastchem = False
     # main(test_dir, target_name, synthetic=synthetic, fastchem=fastchem, ace=ace)
@@ -80,7 +82,7 @@ if __name__ == "__main__":
         # "WASP-19 b",
         # "WASP-17 b",
         # "WASP-12 b",
-        "HD 189733 b",
+        # "HD 189733 b",
         # "HAT-P-26 b",
         # "HAT-P-12 b",
         # "HAT-P-1 b",
@@ -90,17 +92,41 @@ if __name__ == "__main__":
         # "WASP-19b",
         # "WASP-17b",
         # "WASP-12b",
-        "HD189733b",
+        # "HD189733b",
         # "HAT-P-26b",
         # "HAT-P-12b",
         # "HAT-P-1b",
     ]
 
-    dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
+    # dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
 
-    for direct, name in zip(dirs, names):
+    names = [
+        "WASP-39 b",
+        "WASP-121 b",
+    ]
+
+    _dirs = [
+        "WASP-39b",
+        "WASP-121b",
+    ]
+
+    files = [
+        [
+            'WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt',
+            "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"
+        ],
+        [
+            "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt",
+            "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+    ]
+
+    dirs = [[WDIR / "data/taurex_lightcurves_LW" / f for f in d] for d in files]
+
+    for direct, name, file_list in zip(dirs, names, files):
         try:
-            main(direct, name, synthetic=synthetic, fastchem=fastchem, ace=ace)
+            main(file_dir=None, target_name=name, input_list=file_list,
+                 synthetic=synthetic, fastchem=fastchem, ace=ace)
         except BaseException as e:
             print(f"\n\n\n\n\n"
                   f"==========================================================================================\n"
