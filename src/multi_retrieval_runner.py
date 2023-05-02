@@ -5,7 +5,7 @@ WDIR = Path().cwd().parent
 
 import taurex.log
 import logging
-taurex.log.disableLogging()
+# taurex.log.disableLogging()
 import traceback
 
 import itertools
@@ -102,36 +102,67 @@ if __name__ == "__main__":
 
     names = [
         "WASP-39 b",
-        "WASP-121 b",
+        # "WASP-121 b",
     ]
 
     _dirs = [
         "WASP-39b",
-        "WASP-121b",
+        # "WASP-121b",
+    ]
+
+    names = [
+        "WASP-19 b",
+        "WASP-17 b",
+        "WASP-12 b",
+        "HD 189733 b",
+        "HAT-P-26 b",
+        "HAT-P-12 b",
+        "HAT-P-1 b",
     ]
 
     files = [
         [
-            'WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt',
-            "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"
+            'WASP-19-b_HST_WFC3_G141_IRSUB128_Huitson+2013.txt',
+            "WASP-19-b_HST_STIS_G430L_52X2_Huitson+2013.txt"
         ],
         [
-            "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt",
-            "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+            'WASP-17-b_HST_WFC3_G141_GRISM256_Sing+2016.txt',
+            "WASP-17-b_HST_STIS_G430L_52X2_Sing+2016.txt"
         ],
+        [
+            'WASP-12-b_HST_WFC3_G141_GRISM256_Kreidberg+2015.txt',
+            "WASP-12-b_HST_STIS_G430L_52X2_Sing+2013.txt"
+        ],
+        [
+            'HD-189733-b_HST_WFC3_G141_IRSUB128_Sing+2016.txt',
+            "HD-189733-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+        [
+            'HAT-P-26-b_HST_WFC3_G141_GRISM256_Wakeford+2017.txt',
+            "HAT-P-26-b_HST_STIS_G430L_52X2_Wakeford+2017.txt"
+        ],
+        [
+            'HAT-P-12-b_HST_WFC3_G141_GRISM256_Sing+2016.txt',
+            "HAT-P-12-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+        [
+            'HAT-P-1-b_HST_WFC3_G141_GRISM256_Sing+2016.txt',
+            "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        ],
+
     ]
 
     dirs = [[WDIR / "data/taurex_lightcurves_LW" / f for f in d] for d in files]
 
     for direct, name, file_list in zip(dirs, names, files):
         try:
-            main(file_dir=None, target_name=name, input_list=file_list,
+            main(file_dir=None, target_name=name, input_list=direct,
                  synthetic=synthetic, fastchem=fastchem, ace=ace)
         except BaseException as e:
-            print(f"\n\n\n\n\n"
+            print(f"\n\n"
                   f"==========================================================================================\n"
                   f"Could not complete run for {name} from {direct}.\n"
                   f"{e}\n"
                   f"=========================================================================================="
-                  f"\n\n\n\n\n")
+                  f"\n\n")
             pass

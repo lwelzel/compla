@@ -12,6 +12,7 @@ import copy
 import logging
 
 import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import pyplot as pl
 from matplotlib.colors import LinearSegmentedColormap, colorConverter
@@ -382,6 +383,9 @@ def custom_corner_impl(
                 force_range=force_range,
                 **hist2d_kwargs,
             )
+
+            # ax = plt.gca()
+            # ax.ticklabel_format(useOffset=False)
 
             # if max_n_ticks == 0:
             #     ax.xaxis.set_major_locator(NullLocator())

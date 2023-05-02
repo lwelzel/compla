@@ -10,6 +10,7 @@ import numpy.ma as ma
 
 from copy import deepcopy
 from corner import corner
+from custom_corner_core import custom_corner_impl
 
 from taurex.binning.fluxbinner import FluxBinner
 from taurex.util.util import wnwidth_to_wlwidth
@@ -37,7 +38,16 @@ def get_target_results(path=None):
         except KeyError:
             print(f"{paths[i].name} does not have Observed or Solutions")
 
-    return results, paths
+    names = [p.stem for p in paths]
+    split_names = [split_on_underscore(name) for name in names]
+
+    labels = [
+        f'{nlist[2].replace("instrument(", "").replace(")", "")}'.replace("_", "+")
+        for nlist in split_names
+    ]
+    sorting = np.argsort(labels)
+
+    return [results[i] for i in sorting], [paths[i] for i in sorting]
 
 def split_on_underscore(s):
     s = s.replace("spectral_element", "spectral-element")
@@ -95,8 +105,8 @@ def plot_spectrum_into_ax(hdf5file=None, outfile=None, ax=None, label=None):
     hr = pd.DataFrame(res_spec['native_wlgrid'][()], columns=['wavelength'])
     hr['depth'] = res_spec['native_spectrum'][()]
 
-    bd = 0.005
-    lr = pd.DataFrame(np.arange(0.6, 5, bd), columns=['wavelength'])
+    bd = 0.001
+    lr = pd.DataFrame(np.arange(0.3, 2., bd), columns=['wavelength'])
     lr['depth'] = bin_spectrum(lr.copy(), hr)
 
     hr_plus_std = hr.copy()
@@ -114,10 +124,10 @@ def plot_spectrum_into_ax(hdf5file=None, outfile=None, ax=None, label=None):
                     fmt='D', c='k', capsize=5,
                     markersize=2.,
                     elinewidth=0.9,
-                    )
+                    zorder=0)
     except KeyError:
         pass
-    ax.plot(lr['wavelength'], lr['depth'] * factor, c='r', lw=0.8)
+    ax.plot(lr['wavelength'], lr['depth'] * factor, c='r', lw=0.75)
     ax.fill_between(lr['wavelength'], lr['depth_m_std'] * factor, lr['depth_p_std'] * factor, color='r', alpha=0.3)
     # ax.set_xlim(0.85, 1.7)
     # ax.set_ylim(2.01, 2.17)
@@ -287,24 +297,210 @@ def plot_corners_sns(path=None):
     filename = Path(path) / "sns_corner.png"
     plt.savefig(filename, dpi=300)
 
+def get_normalisation_weights(len_current_samples, len_of_longest_samples):
+    return np.ones(len_current_samples) * (len_of_longest_samples / len_current_samples)
+
+
+def make_meta_corner(results, fig=None):
+    dfs = []
+
+    lens = []
+
+    for i, res in enumerate(results):
+        par_names = [n[0].decode("utf-8") for n in res['Optimizer']['fit_parameter_names']]
+        trace = res['Output']['Solutions']['solution0']['tracedata'][()]
+        weights = res['Output']['Solutions']['solution0']['weights'][()]
+
+        lens.append(len(weights))
+
+        df = pd.DataFrame(
+            trace, columns=par_names
+        )
+
+        df["weights"] = weights
+
+        dfs.append(df)
+
+    df = merge_data_sets(dfs)
+
+    def replace_nans(df):
+        for column in df.columns:
+            mask = df[column].isna()
+
+            new = df.loc[~mask, column].sample(sum(mask),
+                                               weights=df.loc[~mask, "weights"].to_numpy(),
+                                               replace=True,
+                                               ).to_numpy()
+
+            df.loc[mask, column] = new
+        return df
+
+    df = replace_nans(df)
+
+    labels = [c for c in df.columns if c != "weights"]
+    data = df[labels]
+
+    norms = np.array(lens) / np.max(lens)
+
+    fig = corner(
+        data=data,
+        fig=fig,
+        weights=df["weights"], #  / len(results),
+        show_titles=False,
+        labels=labels,
+        hist_kwargs={"alpha": 0.},
+        contour_kwargs={"alpha": 0.},
+        contourf_kwargs={"alpha": 0.},
+        data_kwargs={"alpha": 0.},
+        pcolor_kwargs={"alpha": 0.},
+        alpha=0.,
+        use_math_text=True,
+        plot_datapoints=True,
+    )
+
+    return fig, norms
+
+
+def make_sub_corner(fig, result, path, color="k", norm=1.):
+    name = path.stem
+    split_name = split_on_underscore(name)
+    label = f'{split_name[2].replace("instrument(", "").replace(")", "")}'.replace("_", "+")
+
+    trace = result['Output']['Solutions']['solution0']['tracedata'][()]
+    weights = result['Output']['Solutions']['solution0']['weights'][()]
+    parameter_names = [n[0].decode("utf-8") for n in result['Optimizer']['fit_parameter_names']]
+    solutions = result['Output']['Solutions']['solution0']['fit_params']
+
+    data = {k: trace[:, i].flatten() for i, k in enumerate(parameter_names)}
+    # [print(data[k].shape) for k in data.keys()]
+    #
+    # print(parameter_names)
+    #
+    # print(trace.shape)
+    # print(weights.shape)
+
+    if fig is None:
+        fig = plt.gcf()
+
+    fig = custom_corner_impl(
+        # data,
+        trace,
+        fig=fig,
+        weights=weights,
+        color=color,
+        labels=parameter_names,
+        alpha=0.8,
+        use_math_text=True,
+        plot_datapoints=False,
+        fill_contours=False
+    )
+
+    return fig
+
+
+def _overplot_corners(results=None, paths=None):
+    n = len(results)
+
+    names = [p.stem for p in paths]
+    split_names = [split_on_underscore(name) for name in names]
+
+    labels = [
+        f'{nlist[2].replace("instrument(", "").replace(")", "")}'.replace("_", "+")
+        for nlist in split_names
+    ]
+
+    cmap = plt.colormaps.get_cmap('hsv')(np.linspace(0., 1., n, endpoint=False))
+    colors = [cmap[i] for i in range(n)]
+
+    fig, norms = make_meta_corner(results)
+
+    for result, path, color, norm in zip(results, paths, colors, norms):
+        fig = make_sub_corner(fig,
+                              result,
+                              path,
+                              color=color,
+                              norm=norm,
+                              )
+
+    fig, __ = make_meta_corner(results, fig=fig)
+
+    fig.legend(
+        handles=[
+            mpl.lines.Line2D([], [], color=colors[i], label=labels[i])
+            for i in range(n)
+        ],
+        fontsize=16,
+        frameon=True,
+        loc='upper right'
+    )
+
+    fig.suptitle(f"Retrieval {Path(paths[0]).parent.parent.stem}", fontsize=20, fontweight="bold")
+
+def overplot_corners(path=None):
+    results, paths = get_target_results(path=path)
+
+    _overplot_corners(results, paths)
+    plt.gcf()
+    filename = Path(paths[0]).parent.parent / "corner.png"
+    plt.savefig(filename, dpi=300)
+
+
+def _plot_divergence(results, paths):
+    import divergence as dv
+
+    par_names = []
+    traces = []
+    weights = []
+
+    for i, res in enumerate(results):
+        par_name = [n[0].decode("utf-8") for n in res['Optimizer']['fit_parameter_names']]
+        trace = res['Output']['Solutions']['solution0']['tracedata'][()]
+        weight = res['Output']['Solutions']['solution0']['weights'][()]
+
+        print(dv.continuous_entropy_from_sample(trace))
+
+        par_names.append(par_name)
+        traces.append(trace)
+        weights.append(weight)
+
+    return
+
+def plot_divergence(path=None):
+    results, paths = get_target_results(path=path)
+
+
+    plt.gcf()
+    filename = Path(paths[0]).parent.parent / "corner.png"
+    plt.savefig(filename, dpi=300)
+
+
 if __name__ == "__main__":
     _dirs = [
-        "WASP-19b",
-        "WASP-17b",
-        "WASP-12b",
-        "HD-189733b",
-        "HAT-P-26b",
-        "HAT-P-12b",
-        "HAT-P-1b",
+        # "WASP-19b",
+        # "WASP-17b",
+        # "WASP-12b",
+        # "HD-189733b",
+        # "HAT-P-26b",
+        # "HAT-P-12b",
+        # "HAT-P-1b",
         "WASP-39b",
-        # "WASP-121b",
+        #"WASP-121b",
     ]
 
     dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
 
+    # _dirs = [
+    #     "WASP-39b",
+    #     "WASP-121b",
+    # ]
+    #
+    # dirs = [WDIR / "data/retrievals" / d for d in _dirs]
+
+    dirs = [WDIR / "data/synthetic_spectra/WASP-39b/syn_offset/"]
+
     for d in dirs:
         try:
-            plot_corners_sns(d)
+            overplot_corners(d)
             pass
         except KeyError:
             print(f"Not plotting corner for {d.stem}")
@@ -313,6 +509,7 @@ if __name__ == "__main__":
 
         try:
             plot_spectra(d)
+            pass
         except KeyError:
             print(f"Not plotting spectrum for {d.stem}")
 

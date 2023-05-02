@@ -151,7 +151,7 @@ def make_Obs_ObsFit_dict(path_list=None, fit_list=None, fitting_bounds=None, fit
         }
 
         if fitting_bounds is None:
-            fitting_bounds = ['-1e-15', '1e-15']
+            fitting_bounds = ['-1e-4', '1e-4']
 
         if fit_list is None:
             fit_list = list(np.full_like(path_list, fill_value=True, dtype=bool))

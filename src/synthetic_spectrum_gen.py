@@ -179,7 +179,7 @@ def make_synthetic_spectrum_from(input_file_path=None,
             obs = o.create_group('Observed')
             observation.write(obs)
 
-def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=False, ace=False):
+def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=False, ace=False, add_info=""):
     target = get_target_data(name)
 
     comm = MPI.COMM_WORLD
@@ -212,9 +212,9 @@ def make_synthetic_spectrum(name, base_spectrum_list, offset=0., fastchem=False,
         base_spectrum = np.loadtxt(spectrum).T
         base_spectrum_errors = base_spectrum[2].flatten()
 
-        spec_file_name = f"synthetic_{in_name}_transmission_spectrum_{i}.txt"
+        spec_file_name = f"synthetic{add_info}_{in_name}_transmission_spectrum_{i}.txt"
 
-        h5_file_name = f"synthetic_{in_name}_data_{i}.hdf5"
+        h5_file_name = f"synthetic{add_info}_{in_name}_data_{i}.hdf5"
 
         make_synthetic_spectrum_from(input_file_path=par_file_path,
                                      output_file_path=str(Path(path) / h5_file_name),
@@ -233,15 +233,17 @@ if __name__ == "__main__":
     # output_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014")
     # output_spectrum_file_path = str(WDIR / "data/synthetic_spectra/HAT-P-1b/HAT-P-1b_HST_STIS_G430L_52X2_Nikolov+2014/")
 
+    # path_list = [
+    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt"),
+    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"),
+    # ]
+
     path_list = [
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_WFC3_G141_GRISM256_Evans+2016.txt"),
-        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-121-b_HST_STIS_G430L_52X2_Sing+2019.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
+        str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
     ]
 
-    # path_list = [
-    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
-    #     str(WDIR / "data/taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
-    # ]
+    make_synthetic_spectrum("WASP-39 b", base_spectrum_list=path_list, ace=True, add_info="offset=2ppm", offset=2.e-6)
 
     _path_lists = [
         # [
@@ -256,10 +258,10 @@ if __name__ == "__main__":
         #     "WASP-12-b_HST_STIS_G430L_52X2_Sing+2013.txt",
         #     "WASP-12-b_HST_WFC3_G141_GRISM256_Kreidberg+2015.txt"
         # ],
-        [
-            "HD-189733-b_HST_WFC3_G141_IRSUB128_Sing+2016.txt",
-            "HD-189733-b_HST_STIS_G430L_52X2_Sing+2016.txt"
-        ],
+        # [
+        #     "HD-189733-b_HST_WFC3_G141_IRSUB128_Sing+2016.txt",
+        #     "HD-189733-b_HST_STIS_G430L_52X2_Sing+2016.txt"
+        # ],
         # [
         #     "HAT-P-26-b_HST_WFC3_G141_GRISM256_Wakeford+2017.txt",
         #     "HAT-P-26-b_HST_STIS_G430L_52X2_Wakeford+2017.txt"
@@ -278,27 +280,26 @@ if __name__ == "__main__":
         # "WASP-19 b",
         # "WASP-17 b",
         # "WASP-12 b",
-        "HD 189733 b",
+        # "HD 189733 b",
         # "HAT-P-26 b",
         # "HAT-P-12 b",
         # "HAT-P-1 b",
+        "WASP-39 b",
     ]
 
     path_lists = []
 
-    for group in _path_lists:
-        g = []
-        for file in group:
-            g.append(str(WDIR / "data/taurex_lightcurves_LW" / file))
-        path_lists.append(g)
-
-
-    # make_synthetic_spectrum("WASP-121 b", base_spectrum_list=path_list, ace=True)
-
-    for path_list, name in zip(path_lists, names):
-        try:
-            make_synthetic_spectrum(name, base_spectrum_list=path_list, ace=True)
-        except IndexError as e:
-            print(f"\n\n\n\n Did not find planet {name}")
-            print(e)
-            print("\n\n\n\n")
+    # for group in _path_lists:
+    #     g = []
+    #     for file in group:
+    #         g.append(str(WDIR / "data/taurex_lightcurves_LW" / file))
+    #     path_lists.append(g)
+    #
+    #
+    # for path_list, name in zip(path_lists, names):
+    #     try:
+    #         make_synthetic_spectrum(name, base_spectrum_list=path_list, ace=True)
+    #     except IndexError as e:
+    #         print(f"\n\n\n\n Did not find planet {name}")
+    #         print(e)
+    #         print("\n\n\n\n")
