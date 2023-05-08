@@ -476,18 +476,18 @@ def plot_divergence(path=None):
 
 if __name__ == "__main__":
     _dirs = [
-        # "WASP-19b",
-        # "WASP-17b",
-        # "WASP-12b",
-        # "HD-189733b",
-        # "HAT-P-26b",
-        # "HAT-P-12b",
-        # "HAT-P-1b",
-        "WASP-39b",
-        #"WASP-121b",
+        "WASP-19b",
+        "WASP-17b",
+        "WASP-12b",
+        "HD-189733b",
+        "HAT-P-26b",
+        "HAT-P-12b",
+        "HAT-P-1b",
+        # "WASP-39b",
+        # "WASP-121b",
     ]
 
-    dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
+    dirs = [WDIR / "data/retrievals" / d for d in _dirs]
 
     # _dirs = [
     #     "WASP-39b",
@@ -496,7 +496,7 @@ if __name__ == "__main__":
     #
     # dirs = [WDIR / "data/retrievals" / d for d in _dirs]
 
-    dirs = [WDIR / "data/synthetic_spectra/WASP-39b/syn_offset/"]
+    # dirs = [WDIR / "data/synthetic_spectra/WASP-39b/syn_offset/"]
 
     for d in dirs:
         try:
