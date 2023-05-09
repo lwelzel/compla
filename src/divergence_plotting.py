@@ -20,13 +20,11 @@ from taurex.util.util import wnwidth_to_wlwidth
 
 WDIR = Path().cwd().parent
 
-from basic_plotting import get_target_results
+from basic_plotting import get_target_results, split_on_underscore
 from universal_divergence import estimate
 
 def get_high_weight_subsample(path, size=500):
     results, paths = get_target_results(path=path)
-
-
 
     par_names = []
     traces = []
@@ -43,7 +41,7 @@ def get_high_weight_subsample(path, size=500):
         weight = res['Output']['Solutions']['solution0']['weights'][()]
 
         truth = {}
-        for i, name in enumerate(par_name):
+        for j, name in enumerate(par_name):
             for group_k in res["ModelParameters"].keys():
                 if isinstance(res["ModelParameters"][group_k], h5py.Dataset):
                     continue
@@ -52,9 +50,26 @@ def get_high_weight_subsample(path, size=500):
                     assert truth.get(name) is None
                     truth[name] = res["ModelParameters"][group_k][name][()]
 
-        subsample = np.zeros((size, len(par_name)))
-        for i, name in enumerate(par_name):
-            subsample[:, i] = rng.choice(trace[:, i], size=size, p=weight, replace=False, shuffle=False)
+        try:
+            subsample = np.zeros((size, len(par_name)))
+            for j, name in enumerate(par_name):
+                subsample[:, j] = rng.choice(trace[:, j], size=size, p=weight, replace=False, shuffle=False)
+        except ValueError:
+            _size = int(0.6 * len(weight))
+
+            if _size < 200:
+                print(f"Too few samples to choose from: {len(weight)}\n"
+                      f"\tPosterior is probably not full enough for:\n"
+                      f"\t{Path(path).stem}:\n"
+                      f"\t{path}\n"
+                      f"\twith file:\n"
+                      f"\t{paths[i]}")
+
+            print(f"Reducing subsample size: {size} -> {_size}")
+
+            subsample = np.zeros((size, len(par_name)))
+            for i, name in enumerate(par_name):
+                subsample[:, i] = rng.choice(trace[:, i], size=_size, p=weight, replace=False, shuffle=False)
 
         par_names.append(par_name)
         traces.append(trace)
@@ -81,7 +96,8 @@ def get_high_weight_subsample(path, size=500):
     for pair in tqdm(combinations(range(len(results)), 2),
                      leave=False):
         i, j = pair
-        name = f"{Path(paths[i]).stem}-{Path(paths[j]).stem}"
+        name = f"{split_on_underscore(Path(paths[i]).stem)[2]}-" \
+               f"{split_on_underscore(Path(paths[j]).stem)[2]}"
         cross_divergences[name] = {}
 
         all_names = np.unique(np.concatenate((par_names[i], par_names[j])).flatten())
@@ -98,7 +114,7 @@ def get_high_weight_subsample(path, size=500):
                 n_jobs=6
             )
 
-    return par_names, traces, weights, truths, subsamples, divergences_truth, cross_divergences
+    return results, paths, (par_names, traces, weights, truths, subsamples, divergences_truth, cross_divergences)
 
 
 if __name__ == "__main__":
