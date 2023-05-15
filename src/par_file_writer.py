@@ -15,10 +15,10 @@ from configobj import ConfigObj, Section
 import shutil
 from tempfile import NamedTemporaryFile
 from src.retrieval_structure_handler import get_path_filename
-
+from utils import get_wdir_ddir
 from mpi4py import MPI  # import the 'MPI' module
 
-WDIR = Path().cwd().parent
+WDIR, DDIR = get_wdir_ddir()
 
 PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
 MOLECULE_PATH = str(WDIR / "data/molecule_db.json")
@@ -861,6 +861,7 @@ def write_par_file(path_list, target, tm=None, settings=None, which_molecules=No
     path = comm.bcast(path, root=0)
 
     return path
+
 
 if __name__ == "__main__":
     path_list = [

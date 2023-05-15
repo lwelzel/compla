@@ -14,11 +14,12 @@ from datetime import datetime
 from configobj import ConfigObj, Section
 import shutil
 from tempfile import NamedTemporaryFile
-
 from mpi4py import MPI  # import the 'MPI' module
 
-WDIR = Path().cwd().parent
-DDIR = Path("/dump/lukasw/data")
+from utils import get_wdir_ddir
+
+
+WDIR, DDIR = get_wdir_ddir()
 
 PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
 MOLECULE_PATH = str(WDIR / "data/molecule_db.json")
@@ -30,6 +31,7 @@ KTABLE_PATH = str(WDIR / "data/Input/ktables/R100")
 SPECTRA_BE_PATH = str(WDIR / "data/SpectraBE")
 SPECTRA_LW_PATH = str(WDIR / "data/taurex_lightcurves_LW")
 
+
 def parse_file_names(file_names):
     parsed_data = []
 
@@ -39,7 +41,7 @@ def parse_file_names(file_names):
     file_names = [Path(filename).name for filename in file_names]
 
     synthetic = False
-    if np.any(["synthetic_" in filename for filename in file_names]):
+    if np.any(["synthetic" in filename for filename in file_names]):
         synthetic = True
 
     file_names = [filename.replace("synthetic_", "") for filename in file_names]
@@ -74,7 +76,7 @@ def parse_file_names(file_names):
             print(f"Invalid file format: {file_name}")
             continue
 
-        for s in ["-b", "-c", "-d", "-e", "-f", ]:
+        for s in ["-b_", "-c_", "-d_", "-e_", "-f_", ]:
             file_data['planet_name'] = file_data['planet_name'].replace(s, s.replace("-", ""))
 
         parsed_data.append(file_data)
@@ -121,20 +123,15 @@ def create_filename(merged_dict):
 
     not_common_part = "_".join(not_common_part)
 
-    # not_common_part = '_'.join([f"{key}(" + '_'.join(sorted([f"{value}" for value in merged_dict[key]])) + ")"
-    #                             for key in keys_in_order + not_common_keys
-    #                             if isinstance(merged_dict[key], list)
-    #                             else [merged_dict[key]] if isinstance(merged_dict[key], str)])
-
     filename = f"{common_part}_{not_common_part}"
     return filename
 
 
 def create_path(merged_dict, synthetic=False):
     if synthetic:
-        base_path = Path("/data/synthetic_spectra")
+        base_path = DDIR / Path("SYN")
     else:
-        base_path = Path("/data/retrievals")
+        base_path = DDIR / Path("OBS")
 
     keys_in_order = ['planet_name', ]  # 'facility', 'instrument', 'spectral_element']
 
