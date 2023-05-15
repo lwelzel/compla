@@ -15,13 +15,11 @@ def get_wdir_ddir():
 
     if WDIR is None or DDIR is None:
         if os_name == "Windows":
-            WDIR = Path("C:\Users\lukas\Documents\git\compla")
-            DDIR = Path("C:\Users\lukas\Documents\git\compla\data")
+            WDIR = Path(r"C:\Users\lukas\Documents\git\compla")
+            DDIR = Path(r"C:\Users\lukas\Documents\git\compla\data")
         elif os_name == "Linux":
-            print("Assign")
-            raise NotImplementedError
-            WDIR = Path("")
-            DDIR = Path("")
+            WDIR = Path(r"/home/lukasw/Documents/git/compla")
+            DDIR = Path(r"/dump/lukasw/data")
         else:
             print("Assign WDIR and DDIR")
             raise NotImplementedError

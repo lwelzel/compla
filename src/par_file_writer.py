@@ -20,15 +20,15 @@ from mpi4py import MPI  # import the 'MPI' module
 
 WDIR, DDIR = get_wdir_ddir()
 
-PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
-MOLECULE_PATH = str(WDIR / "data/molecule_db.json")
+PLANET_DB_PATH = str(DDIR / "planet_database_composite.csv")
+MOLECULE_PATH = str(DDIR / "molecule_db.json")
 
-OPACITY_PATH = str(WDIR / "data/Input/xsec/xsec_sampled_R15000_0.3-15")
-CIA_PATH = str(WDIR / "data/Input/cia/HITRAN")
-KTABLE_PATH = str(WDIR / "data/Input/ktables/R100")
+OPACITY_PATH = str(DDIR / "Input/xsec/xsec_sampled_R15000_0.3-15")
+CIA_PATH = str(DDIR / "Input/cia/HITRAN")
+KTABLE_PATH = str(DDIR / "Input/ktables/R100")
 
-SPECTRA_BE_PATH = str(WDIR / "data/SpectraBE")
-SPECTRA_LW_PATH = str(WDIR / "data/taurex_lightcurves_LW")
+SPECTRA_BE_PATH = str(DDIR / "SpectraBE")
+SPECTRA_LW_PATH = str(DDIR / "taurex_lightcurves_LW")
 
 
 def read_json_file(file_path):
@@ -151,7 +151,7 @@ def make_Obs_ObsFit_dict(path_list=None, fit_list=None, fitting_bounds=None, fit
         }
 
         if fitting_bounds is None:
-            fitting_bounds = ['-1e-4', '1e-4']
+            fitting_bounds = ['-1e-3', '1e-3']
 
         if fit_list is None:
             fit_list = list(np.full_like(path_list, fill_value=True, dtype=bool))
@@ -369,9 +369,21 @@ def make_ACE_dict(target, molecule_dp_path=MOLECULE_PATH, which_molecules=None,
         "co_ratio": 0.5,
     }
 
+    # TODO: check if properly implemented
+    active_molecules = ['CH3COOOH', 'C4H9O', 'C3H7O', 'NO3', 'CH3COOO', 'C2H5OO', 'C2H4OOH', 'HONO2', 'C2H5OOH',
+                        'CH3ONO', 'C3H8CO', 'CH3NO2', '1C4H9', '2C4H9', 'C4H10', 'C3H7OH', 'CH3OO', 'C4H8Y', 'CH3OOH',
+                        'HNO2', 'CH3OCO', 'C2H5CHO', 'C2H6CO', 'C2H5O', 'CH3NO', '2C2H4OH', 'NO2', '2C3H7', '1C3H7',
+                        '1C2H4OH', 'HONO', 'C3H8', 'HCNN', 'cC2H4O', 'HCNO', 'C2H5OH', 'N2O', 'C2H3CHOZ', 'OOH',
+                        'CH2CHO', 'H2O2', 'CH3CO', 'NCO', 'CH3O', 'O2', 'CH3CHO', 'HNO', 'C', 'CHCO', 'CO2H', 'HOCN',
+                        'C2H5', 'C2H', 'CH2OH', 'CH', 'C2H6', 'C2H3', 'CH2CO', 'NNH', 'H2CN', 'CH3OH', 'N4S', 'N2D',
+                        'CN', '1CH2', 'HNCO', 'NO', 'O3P', 'O1D', 'C2H4', 'NH', '3CH2', 'HCO', 'C2H2', 'H2CO', 'NH2',
+                        'CO2', 'OH', 'CH3', 'HCN', 'NH3', 'CH4', 'N2', 'CO', 'H2O', 'H', 'He', 'H2', 'N2O4', 'N2O3',
+                        'N2H2', 'N2H3', 'N2H4', 'HNNO', 'HNOH', 'HNO3', 'NH2OH', 'H2NO', 'CNN', 'H2CNO', 'C2N2', 'HCNH',
+                        'HNC', 'HON', 'NCN']
+
     ace_metallicity_bounds = [0.01, 10.]
     ace_metallicity_prior = "Uniform(bounds=({}, {}))"
-    C_O_ratio_bounds = [1e-4, 1.]
+    C_O_ratio_bounds = [1e-4, 10.]
     C_O_ratio_prior = "Uniform(bounds=({}, {}))"
 
 
@@ -408,6 +420,19 @@ def make_Temp_dict(target=None, settings=None, which=None, **kwargs):
         "T_irr": target["Equilibrium Temperature [K]"],
         # rest is defaults for now
     }
+
+    default_npoint_dict = {
+        "profile_type": "npoint",
+        "T_top": 0.8 * target["Equilibrium Temperature [K]"],
+        "T_surface": target["Equilibrium Temperature [K]"],
+        "P_top": 1.0e-6,
+        "P_surface": 1.0e6,
+        "temperature_points": [0.99 * target["Equilibrium Temperature [K]"],
+                               0.9 * target["Equilibrium Temperature [K]"]],
+        "pressure_points": [1.0e-3, 1.0e3],
+        # rest is defaults for now
+    }
+
     if which is None:
         default_dict = default_iso_dict
     elif which == "isothermal":
@@ -419,7 +444,8 @@ def make_Temp_dict(target=None, settings=None, which=None, **kwargs):
 
     # TODO: issues because errors are thrown if unexpected keys in Temperature config
     # overwrite partial if type key is same, overwrite fully if mismatch
-    return {"Temperature": {**default_dict, **settings.get("Temperature", settings)}}
+    return {"Temperature": {**default_dict,
+                            **settings.get("Temperature", settings)}}
 
 
 def make_Press_dict(settings=None, **kwargs):
@@ -682,10 +708,10 @@ def make_Opt_dict(settings=None, path=None, filename=None, **kwargs):
     settings = {**settings,
                 **{
                     "optimizer": "multinest",
-                    "num_live_points": 500,
-                    'evidence_tolerance': 0.5,  # set to 6-8 for fast convergence testing
+                    "num_live_points": 1000,
+                    'evidence_tolerance': 0.1,  # set to 6-8 for fast convergence testing
                     "max_iterations": 0,
-                    "multi_nest_path": str(Path(path) / Path(filename).stem),  # not supported?
+                    "multi_nest_path": str(Path(path)),  # not supported?
                 }}
 
     return {"Optimizer": settings}
@@ -761,11 +787,11 @@ def _write_par_file(path_list, target, tm=None, settings=None, which_molecules=N
     if path is None or filename is None:
         time = f'_time-{datetime.now().isoformat(sep="-", timespec="seconds").replace(":", "-")}'
 
-        path, filename = get_path_filename(path_list, synthetic=synthetic)
-        path = str(Path(WDIR) / path)
+        path, filename = get_path_filename(path_list, synthetic=synthetic, timestamp=True)
 
-        os.makedirs(path, exist_ok=True)
-        filename = filename + time + ".par"
+        os.makedirs(str(path), exist_ok=True)
+        filename = str(filename) + ".par"
+        filename = "parfile.par"
 
     global_dict = make_Global_dict(settings=settings)
     obs_dict = make_Obs_ObsFit_dict(path_list=path_list, settings=settings)
@@ -822,10 +848,9 @@ def _write_par_file(path_list, target, tm=None, settings=None, which_molecules=N
     # if filename is None:
     #     filename = "default.par"
 
-    config.filename = str(Path(path) / filename)
     config_path = Path(path) / filename
 
-    os.makedirs(str(config_path).replace(str(config_path.suffix), ""), exist_ok=True)
+    config.filename = str(Path(path) / filename)
 
     # Save the file to a temporary location if it exists
     temp_file = None
@@ -865,8 +890,8 @@ def write_par_file(path_list, target, tm=None, settings=None, which_molecules=No
 
 if __name__ == "__main__":
     path_list = [
-        # str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
-        # str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+        str(DDIR / "taurex_lightcurves_LW" / "WASP-39-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
+        str(DDIR / "taurex_lightcurves_LW" / "WASP-39-b_HST_WFC3_G141_GRISM256_Wakeford+2018.txt"),
     ]
 
     # path_list = [
@@ -875,8 +900,17 @@ if __name__ == "__main__":
     # ]
 
 
-    target = get_target_data("HAT-P-1 b")
+    settings = {
 
-    write_par_file(path_list, target=target, fastchem=False, ace=True, synthetic=True)
+    }
+
+
+    target = "WASP-39 b"
+
+    print(target)
+
+    p = write_par_file(path_list, target=target, fastchem=False, ace=True, synthetic=True)
+
+    print(p)
 
 

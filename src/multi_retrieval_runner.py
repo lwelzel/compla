@@ -100,15 +100,15 @@ if __name__ == "__main__":
 
     # dirs = [WDIR / "data/synthetic_spectra" / d for d in _dirs]
 
-    names = [
-        "WASP-39 b",
-        # "WASP-121 b",
-    ]
-
-    _dirs = [
-        "WASP-39b",
-        # "WASP-121b",
-    ]
+    # names = [
+    #     "WASP-39 b",
+    #     # "WASP-121 b",
+    # ]
+    #
+    # _dirs = [
+    #     "WASP-39b",
+    #     # "WASP-121b",
+    # ]
 
     names = [
         "WASP-19 b",

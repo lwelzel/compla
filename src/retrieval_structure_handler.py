@@ -21,15 +21,15 @@ from utils import get_wdir_ddir
 
 WDIR, DDIR = get_wdir_ddir()
 
-PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
-MOLECULE_PATH = str(WDIR / "data/molecule_db.json")
+PLANET_DB_PATH = str(DDIR / "data/planet_database_composite.csv")
+MOLECULE_PATH = str(DDIR / "data/molecule_db.json")
 
-OPACITY_PATH = str(WDIR / "data/Input/xsec/xsec_sampled_R15000_0.3-15")
-CIA_PATH = str(WDIR / "data/Input/cia/hitran")
-KTABLE_PATH = str(WDIR / "data/Input/ktables/R100")
+OPACITY_PATH = str(DDIR / "data/Input/xsec/xsec_sampled_R15000_0.3-15")
+CIA_PATH = str(DDIR / "data/Input/cia/hitran")
+KTABLE_PATH = str(DDIR / "data/Input/ktables/R100")
 
-SPECTRA_BE_PATH = str(WDIR / "data/SpectraBE")
-SPECTRA_LW_PATH = str(WDIR / "data/taurex_lightcurves_LW")
+SPECTRA_BE_PATH = str(DDIR / "data/SpectraBE")
+SPECTRA_LW_PATH = str(DDIR / "data/taurex_lightcurves_LW")
 
 
 def parse_file_names(file_names):
@@ -141,14 +141,20 @@ def create_path(merged_dict, synthetic=False):
             break
         common_keys.append(key)
 
+    planet_name = merged_dict['planet_name']
+    instrument_name = merged_dict['instrument']
+    if isinstance(instrument_name, list):
+        instrument_name = "+".join(sorted(instrument_name))
+
     new_directory = create_filename(merged_dict)
-    path_parts = [base_path] + [merged_dict[key] for key in common_keys] + [new_directory]
+    # path_parts = [base_path] + [merged_dict[key] for key in common_keys] + [new_directory]
+    path_parts = [base_path] + [planet_name, instrument_name] + [new_directory]
     path = Path(*path_parts)
 
-    return str(path)[1:]
+    return str(path)
 
 
-def get_path_filename(file_names, synthetic=False):
+def get_path_filename(file_names, synthetic=False, timestamp=False):
     dicts, _synthetic = parse_file_names(file_names)
     show_new_path = False
     if _synthetic != synthetic and synthetic is False:
@@ -171,6 +177,11 @@ def get_path_filename(file_names, synthetic=False):
         path = Path(path)
     else:
         path = re.sub(pattern, '', path)
+
+    if timestamp:
+        time = f'_time-{datetime.now().isoformat(sep="-", timespec="seconds").replace(":", "-")}'
+        path = Path(str(path) + time)
+        filename = Path(str(filename) + time)
 
     return path, filename
 
@@ -212,11 +223,11 @@ if __name__ == "__main__":
 
     file_names = [
         str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Nikolov+2014.txt"),
-        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_STIS_G430L_52X2_Sing+2016.txt"),
-        str(WDIR / "data/SpectraBE" / "HAT-P-1b_G141.txt")
+        str(WDIR / "data/taurex_lightcurves_LW" / "HAT-P-1-b_HST_WFC3_G430L_52X2_Sing+2016.txt"),
+        # str(WDIR / "data/SpectraBE" / "HAT-P-1b_G141.txt")
     ]
 
-    path, filename = get_path_filename(file_names, synthetic=True)
+    path, filename = get_path_filename(file_names, synthetic=True, timestamp=True)
 
     print(path)
     print(filename)
