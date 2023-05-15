@@ -18,6 +18,7 @@ from tempfile import NamedTemporaryFile
 from mpi4py import MPI  # import the 'MPI' module
 
 WDIR = Path().cwd().parent
+DDIR = Path("/dump/lukasw/data")
 
 PLANET_DB_PATH = str(WDIR / "data/planet_database_composite.csv")
 MOLECULE_PATH = str(WDIR / "data/molecule_db.json")

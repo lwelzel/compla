@@ -67,7 +67,7 @@ def get_high_weight_subsample(path, size=500):
 
             print(f"Reducing subsample size: {size} -> {_size}")
 
-            subsample = np.zeros((size, len(par_name)))
+            subsample = np.zeros((_size, len(par_name)))
             for i, name in enumerate(par_name):
                 subsample[:, i] = rng.choice(trace[:, i], size=_size, p=weight, replace=False, shuffle=False)
 
